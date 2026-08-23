@@ -535,10 +535,10 @@ function renderEditor(){
     <div><label class="flabel">团 / 艺人</label><select class="fld" id="f_artist">${groupOpts}</select></div>
     <div><label class="flabel">巡演 / 演唱会名</label><input class="fld" id="f_tour" value="${esc(r.tour||"")}" placeholder="如 BORN TO BE World Tour"></div>
     <div><label class="flabel">日期</label><input class="fld" type="date" id="f_date" value="${esc(r.date||"")}"></div>
-    <div><label class="flabel">城市</label><input class="fld" id="f_city" value="${esc(r.city||"")}" placeholder="如 上海"></div>
-    <div><label class="flabel">场馆</label><input class="fld" id="f_venue" value="${esc(r.venue||"")}" placeholder="如 梅赛德斯奔驰文化中心"></div>
+    <div><label class="flabel">城市</label><input class="fld" id="f_city" value="${esc(r.city||"")}" ></div>
+    <div><label class="flabel">场馆</label><input class="fld" id="f_venue" value="${esc(r.venue||"")}" ></div>
     <div><label class="flabel">评分</label><div class="stars-input" id="f_stars"></div></div>
-    <div class="full"><label class="flabel">感想</label><textarea class="fld" id="f_notes" placeholder="那晚的感受、名场面、solo、ment…">${esc(r.notes||"")}</textarea></div>`;
+    <div class="full"><label class="flabel">感想</label><textarea class="fld" id="f_notes">${esc(r.notes||"")}</textarea></div>`;
   box.appendChild(grid);
   // stars
   const sc=grid.querySelector("#f_stars");
