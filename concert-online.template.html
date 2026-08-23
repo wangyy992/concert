@@ -229,6 +229,7 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
     <button id="importBtn2" class="btn">导入</button>
     <button id="exportBtn2" class="btn">导出全部</button>
   </div>
+  <button id="authBtn" class="btn hidden" title="邮箱登录 / 云端同步">登录</button>
 </header>
 
 <main class="layout">
@@ -316,6 +317,20 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
   <div class="modal-actions"><button class="btn btn-primary" id="exportClose">完成</button></div>
 </div></div>
 
+<div class="overlay" id="authOverlay"><div class="modal">
+  <h3 id="authTitle">邮箱登录</h3>
+  <p id="authDesc">输入邮箱，我们发一封登录邮件给你，点开链接即可登录。登录后你的编排与观演记录会自动云端同步，换设备登录也能看到。</p>
+  <div id="authLoggedOut">
+    <label>邮箱</label>
+    <input type="text" id="authEmail" placeholder="you@example.com" inputmode="email">
+    <div class="modal-actions"><button class="btn btn-ghost" id="authCancel">取消</button><button class="btn btn-primary" id="authSend">发送登录邮件</button></div>
+  </div>
+  <div id="authLoggedIn" class="hidden">
+    <p style="color:var(--text)">已登录：<b id="authWho"></b></p>
+    <div class="modal-actions"><button class="btn btn-ghost" id="authLogout">退出登录</button><button class="btn" id="authSync">立即同步</button><button class="btn btn-primary" id="authDone">完成</button></div>
+  </div>
+</div></div>
+
 <div class="overlay" id="importOverlay"><div class="modal">
   <h3>导入</h3>
   <p>把之前「导出」的存档 JSON 粘进来，覆盖当前数据。</p>
@@ -330,8 +345,12 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
   <div class="modal-actions"><button class="btn btn-ghost" id="addCancel">取消</button><button class="btn btn-primary" id="addDo">添加</button></div>
 </div></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 "use strict";
+/* ===== 云同步配置：填入你的 Supabase 项目信息即可启用（留空=纯本地）===== */
+const SUPABASE_URL="";       // 例：https://xxxx.supabase.co
+const SUPABASE_ANON_KEY="";  // 你的 anon public key（公开安全）
 const COVERS=/*__COVERS__*/{}/*__END__*/;
 const PREVIEWS=/*__PREVIEWS__*/{}/*__END__*/;
 const LIBRARY=/*__LIBRARY__*/{}/*__END__*/;
@@ -354,8 +373,8 @@ let currentGroup="itzy";
 let mode="build";
 let editing=null;               // log record being edited (object) or null
 let concert=jload(LS.state,null)||{name:"",intro:null,parts:[{id:uid(),title:"Part 1",items:[]}],outro:null};
-const persist=()=>jsave(LS.state,concert);
-const saveLogs=()=>jsave(LS.log,logs);
+const persist=()=>{jsave(LS.state,concert);scheduleCloudPush();};
+const saveLogs=()=>{jsave(LS.log,logs);scheduleCloudPush();};
 
 /* ---------- 解析 ---------- */
 function coverOf(g,al){return (COVERS[g]||{})[al]||"";}
@@ -649,6 +668,57 @@ function show(s){$(s).classList.add("show");} function hide(s){$(s).classList.re
 function copyFrom(sel){const el=$(sel);el.select();try{document.execCommand("copy");}catch{}try{navigator.clipboard?.writeText(el.value);}catch{}}
 function doImport(){try{const d=JSON.parse($("#importText").value);if(d.concert)concert=d.concert;if(d.custom){custom=d.custom;jsave(LS.custom,custom);}if(d.logs){logs=d.logs;saveLogs();}persist();$("#concertName").value=concert.name||"";renderTabs();renderLib();renderBuilder();renderLog();hide("#importOverlay");}catch{alert("解析失败，请确认是本工具导出的存档 JSON");}}
 
+/* ---------- 云同步（Supabase）---------- */
+let sb=null, cloudUser=null, pushTimer=null, applyingCloud=false;
+function initCloud(){
+  if(!SUPABASE_URL||!SUPABASE_ANON_KEY||!window.supabase)return;
+  try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);}catch(e){return;}
+  $("#authBtn").classList.remove("hidden");
+  sb.auth.getSession().then(({data})=>onAuth(data.session));
+  sb.auth.onAuthStateChange((_e,session)=>onAuth(session));
+}
+function onAuth(session){cloudUser=session?.user||null;updateAuthUI();if(cloudUser)pullCloud();}
+function updateAuthUI(){const btn=$("#authBtn");if(!btn)return;if(cloudUser){btn.textContent=(cloudUser.email||"账号").split("@")[0]+" ▾";btn.classList.add("btn-primary");}else{btn.textContent="登录";btn.classList.remove("btn-primary");}}
+async function pullCloud(){
+  if(!cloudUser||!sb)return;
+  try{
+    const {data,error}=await sb.from("app_state").select("data").eq("user_id",cloudUser.id).maybeSingle();
+    if(error)throw error;
+    if(data&&data.data){
+      applyingCloud=true;const d=data.data;
+      if(d.concert)concert=d.concert;
+      if(d.custom){custom=d.custom;jsave(LS.custom,custom);}
+      if(d.logs){logs=d.logs;jsave(LS.log,logs);}
+      jsave(LS.state,concert);applyingCloud=false;
+      $("#concertName").value=concert.name||"";
+      renderTabs();renderLib();if(mode==="build")renderBuilder();else renderLog();
+    }else{pushCloud();}
+  }catch(e){console.warn("cloud pull failed",e);}
+}
+function scheduleCloudPush(){if(!cloudUser||applyingCloud)return;clearTimeout(pushTimer);pushTimer=setTimeout(pushCloud,1200);}
+async function pushCloud(){
+  if(!cloudUser||!sb)return;
+  try{await sb.from("app_state").upsert({user_id:cloudUser.id,data:{concert,custom,logs},updated_at:new Date().toISOString()});}
+  catch(e){console.warn("cloud push failed",e);}
+}
+function openAuth(){
+  const inOut=!!cloudUser;
+  $("#authLoggedIn").classList.toggle("hidden",!inOut);
+  $("#authLoggedOut").classList.toggle("hidden",inOut);
+  $("#authTitle").textContent=inOut?"账号":"邮箱登录";
+  if(inOut){$("#authWho").textContent=cloudUser.email||"";}
+  else{$("#authDesc").textContent="输入邮箱，我们发一封登录邮件给你，点开链接即可登录。登录后编排与观演记录会自动云端同步，换设备登录也能看到。";$("#authSend").textContent="发送登录邮件";}
+  show("#authOverlay");
+}
+function sendMagic(){
+  const email=$("#authEmail").value.trim();if(!email)return;
+  $("#authSend").textContent="发送中…";
+  sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}}).then(({error})=>{
+    if(error){alert("发送失败："+error.message);$("#authSend").textContent="发送登录邮件";}
+    else{$("#authDesc").textContent="登录邮件已发送到 "+email+"。请去邮箱点开链接，会自动登录并同步（可关闭此窗口）。";}
+  });
+}
+
 /* ---------- 模式切换 ---------- */
 function setMode(m){
   mode=m; editing=null;
@@ -694,10 +764,18 @@ function init(){
   $("#copyText").onclick=()=>copyFrom("#exportText"); $("#copyJson").onclick=()=>copyFrom("#exportJson");
   $("#importCancel").onclick=()=>hide("#importOverlay"); $("#importDo").onclick=doImport;
   $("#addCancel").onclick=()=>hide("#addOverlay");
-  $("#addDo").onclick=()=>{const t=$("#addTitle").value.trim();if(!t)return;custom.push({group:currentGroup,album:"自定义",title:t});jsave(LS.custom,custom);hide("#addOverlay");renderLib();};
+  $("#addDo").onclick=()=>{const t=$("#addTitle").value.trim();if(!t)return;custom.push({group:currentGroup,album:"自定义",title:t});jsave(LS.custom,custom);scheduleCloudPush();hide("#addOverlay");renderLib();};
+  $("#authBtn").onclick=openAuth;
+  $("#authCancel").onclick=()=>hide("#authOverlay");
+  $("#authDone").onclick=()=>hide("#authOverlay");
+  $("#authSend").onclick=sendMagic;
+  $("#authEmail").addEventListener("keydown",e=>{if(e.key==="Enter")sendMagic();});
+  $("#authLogout").onclick=()=>{if(sb)sb.auth.signOut();hide("#authOverlay");};
+  $("#authSync").onclick=()=>{pushCloud();flash("#authSync","已同步 ✓");};
   document.querySelectorAll(".mode-tab").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
   document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("show");}));
   setPlayIcon(false); renderTabs(); renderLib(); renderBuilder(); renderAddCtx();
+  initCloud();
 }
 document.addEventListener("DOMContentLoaded",init);
 </script>
