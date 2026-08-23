@@ -264,7 +264,11 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
   <div class="player-row">
     <img id="pCover" class="pcover" alt="">
     <div class="pinfo"><div class="pnow" id="pNow">未在播放</div><div class="psub" id="pSub">点任意歌曲的 ▶ 直接播放（官方试听片段）</div></div>
-    <div class="pctrls"><button class="pbtn" id="pPrev">⏮</button><button class="pbtn main" id="pPlay">▶</button><button class="pbtn" id="pNext">⏭</button></div>
+    <div class="pctrls">
+      <button class="pbtn" id="pPrev" aria-label="上一首"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M7 6h2v12H7z"/><path d="M19 6v12l-9-6z"/></svg></button>
+      <button class="pbtn main" id="pPlay" aria-label="播放/暂停"></button>
+      <button class="pbtn" id="pNext" aria-label="下一首"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M15 6h2v12h-2z"/><path d="M5 6l9 6-9 6z"/></svg></button>
+    </div>
     <div class="pseek"><span class="ptime" id="pCur">0:00</span><input type="range" class="bar" id="pBar" min="0" max="1000" value="0"><span class="ptime" id="pDur">0:16</span></div>
     <div class="pmeta" id="pMeta"></div>
   </div>
@@ -550,7 +554,9 @@ function startQueue(items,idx){queue=items;qi=idx;playCur();}
 function playCur(){const it=queue[qi];if(!it)return;const src=audioOf(it.group,it.album,it.title);if(!src){nextTrack();return;}curKey=key(it.group,it.album,it.title);au.src=src;au.play().catch(()=>{});$("#pNow").textContent=it.title;$("#pSub").textContent=(it.groupName||it.group)+" · "+it.album;$("#pMeta").textContent=queue.length>1?`${qi+1}/${queue.length}`:"";const cv=coverOf(it.group,it.album),c=$("#pCover");if(cv){c.src=cv;c.style.visibility="visible";}else c.style.visibility="hidden";markPlaying();}
 function nextTrack(){if(qi<queue.length-1){qi++;playCur();}else setPlayIcon(false);}
 function prevTrack(){if(qi>0){qi--;playCur();}else au.currentTime=0;}
-function setPlayIcon(p){$("#pPlay").textContent=p?"⏸":"▶";}
+const SVG_PLAY='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+const SVG_PAUSE='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M7 5h3.4v14H7zM13.6 5H17v14h-3.4z"/></svg>';
+function setPlayIcon(p){$("#pPlay").innerHTML=p?SVG_PAUSE:SVG_PLAY;}
 function markPlaying(){document.querySelectorAll(".track.playing,.item.playing").forEach(e=>e.classList.remove("playing"));if(!curKey||au.paused)return;document.querySelectorAll(`.track[data-k="${CSS.escape(curKey)}"]`).forEach(e=>e.classList.add("playing"));const it=queue[qi];if(it)document.querySelectorAll(`.item[data-uid="${it.uid}"]`).forEach(e=>e.classList.add("playing"));}
 au.addEventListener("play",()=>{setPlayIcon(true);markPlaying();});
 au.addEventListener("pause",()=>{setPlayIcon(false);markPlaying();});
