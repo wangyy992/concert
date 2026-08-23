@@ -1,34 +1,25 @@
 # 🎤 My Concert Builder
 
-> 在线版：`concert-online.html` 是单文件、可直接托管的版本。曲库涵盖两团**完整发行**（含日专日单与 2025/2026 回归），共 150+ 首。点歌曲的 ▶ 会**在页面内直接播放**官方试听片段（片段已内嵌进文件、约 16 秒，无需联网、不跳转），「连播整场」按 Intro→Part→Outro 顺序一段接一段播。曲库数据由 Apple 音乐库自动构建（见 `build/`）。
->
-> `index.html`（多文件版）用 YouTube 内嵌播放**整首歌**，适合本地运行。
+给 ITZY / LE SSERAFIM 自己编排一场演唱会，并记录你看过的真实演唱会。
 
+**在线访问（GitHub Pages）**：`https://wangyy992.github.io/concert/`
 
-自己组一场演唱会的网页：把偶像组合的歌按专辑排好、能试听，然后按你自己的想法编排——选 Intro、分几个 Part、每首歌标上「花车 / 巡场 / 饭撒·小舞台 / 普通舞台」、选 Outro，组完能整场连播、导出歌单。
+## 功能
 
-第一版收录：**ITZY** 与 **LE SSERAFIM**（按专辑排列，主打歌已预配官方音源）。
+- **🎫 编排模式**：按专辑浏览完整曲库（含日专日单与 2025/2026 回归），选 Intro、分任意个 Part、给每首歌标「花车 / 巡场 / 饭撒·小舞台 / 普通舞台」、选 Outro。
+- **点即播**：每首歌内嵌官方试听片段（约 16 秒），点 ▶ 在页面内直接播放，「连播整场」按顺序自动串播。没试听的歌可点 📁 上传本地音频。
+- **📖 观演记录模式**：记录看过的演唱会——团 / 巡演 / 日期 / 城市 / 场馆 / 评分 / 感想 + 当晚实际曲目单，可「▶ 播放这场」。
+- **导出**：Apple Music 逐首直达链接；或「歌手 - 歌名」列表配合 TuneMyMusic / Soundiiz **自动在 AM / 网易云建歌单**。含存档 JSON 导入/导出。
+- 所有数据存在浏览器本地（localStorage），私有、刷新不丢。
 
-## 怎么运行
+## 文件
 
-纯前端，无需后端。两种方式：
+- `index.html` — 完整单文件应用（曲库/封面/试听片段已内嵌），GitHub Pages 首页。
+- `concert-online.template.html` — `index.html` 的源模板（数据用占位符），配合 `build/` 生成。
+- `build/` — 从 Apple iTunes 接口自动构建曲库数据的脚本，见 `build/README.md`。
+- `local-youtube.html` + `data.js` / `styles.css` / `app.js` — 早期版本，用 YouTube 内嵌播放**整首歌**，适合本地运行。
 
-1. **直接打开**：双击 `index.html` 用浏览器打开即可。
-2. **本地起服务**（推荐，YouTube 播放更稳）：
-   ```bash
-   npx http-server . -p 8080
-   # 然后浏览器打开 http://localhost:8080
-   ```
+## 开启 GitHub Pages（一次性）
 
-## 玩法
-
-- **左边曲库**：切换团 → 展开专辑 → 每首歌 `▶` 试听、`＋` 加入演唱会。
-- 歌旁标「♪ 有音源 / 无音源」。无音源的点 `🔎` 会打开 YouTube 搜索，把官方视频链接粘回来即可锁定（存在本地，刷新不丢）。
-- **右边编排**：顶部「添加到」选目的地（Intro / 某个 Part / Outro）；`＋ 添加一个 Part` 可加任意段；每首歌能拖动排序、用下拉打舞台标签。
-- **▶ 连播整场**：按 Intro → 各 Part → Outro 顺序自动连播（只播有音源的）。
-- **导出**：下载 `.json` 存档（可再导入）+ 文本歌单复制到剪贴板。
-
-## 数据
-
-- 曲库/编排/音源链接都存在浏览器 `localStorage`，本地私有。
-- 曲库可自行增删纠错：`data.js` 里改，或页面「＋ 手动添加一首歌」。
+仓库 **Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: `main` / `/ (root)` → Save**。
+稍等一两分钟，站点即在 `https://wangyy992.github.io/concert/` 上线。
