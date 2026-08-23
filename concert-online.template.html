@@ -1,3 +1,5 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>My Concert Builder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -95,7 +97,8 @@ button,input,select,textarea{font-family:inherit;}
 .part{border:1px solid var(--line); border-radius:12px; background:var(--panel-2); overflow:hidden;}
 .part-head{display:flex; align-items:center; gap:9px; padding:10px 13px; border-bottom:1px solid var(--line); background:var(--panel-3);}
 .part-num{font-family:var(--disp); font-weight:800; font-size:12px; color:var(--bg); background:linear-gradient(120deg,var(--itzy),var(--lsf)); width:24px; height:24px; border-radius:7px; display:grid; place-items:center; flex:none;}
-.part-title{flex:1; background:transparent; border:none; color:var(--text); font-weight:700; font-size:14px; border-bottom:1px dashed transparent; padding:2px 0;}
+.part-title{flex:1; min-width:0; background:transparent; border:none; color:var(--text); font-weight:700; font-size:14px; border-bottom:1px dashed var(--line); padding:2px 0;}
+.part-title:hover{border-bottom-color:var(--muted);}
 .part-title:focus{outline:none; border-bottom-color:var(--itzy);}
 .part-count{color:var(--muted-2); font-size:12px; margin-right:6px; font-variant-numeric:tabular-nums;}
 .part-items{padding:8px; display:flex; flex-direction:column; gap:6px; min-height:34px;}
@@ -107,6 +110,8 @@ button,input,select,textarea{font-family:inherit;}
 .item-name .g{color:var(--muted-2); font-size:11px; font-weight:400;}
 .move{display:flex; flex-direction:column; gap:1px;} .move button{line-height:1; padding:1px 5px; font-size:9px; border-radius:5px;}
 .slot .item{flex:1;}
+.tags{display:flex; gap:5px; flex:none;}
+.tags .tag-sel{padding:5px 7px; font-size:12px;}
 .stat-bar{margin-top:16px; padding-top:14px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; display:flex; gap:8px 16px; flex-wrap:wrap; align-items:center;}
 .stat-bar b{color:var(--text); font-variant-numeric:tabular-nums;}
 .add-song{width:100%; margin-top:12px;}
@@ -167,13 +172,45 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 .am-row a{color:#fff; text-decoration:none; background:#fa2d48; padding:4px 10px; border-radius:7px; font-size:12px; font-weight:600;}
 .am-row .miss{color:var(--muted-2); font-size:12px;}
 .hidden{display:none!important;}
+
+/* ---- 移动端 ---- */
+@media(max-width:640px){
+  .topbar{padding:10px 13px; gap:9px;}
+  .brand{font-size:17px;}
+  .mode-tabs{order:2;}
+  .concert-name{order:5; flex-basis:100%; min-width:0;}
+  .top-actions{margin-left:auto; flex-wrap:wrap; gap:6px;}
+  .top-actions .btn{padding:8px 11px;}
+  .layout{padding:12px; gap:12px;}
+  .panel{padding:12px;}
+  .album-list{max-height:none;}
+  .album-head{gap:11px; padding:11px; min-height:60px;}
+  .album-cover{width:46px; height:46px;}
+  .item{flex-wrap:wrap; gap:7px 8px;}
+  .item .item-name{flex-basis:calc(100% - 66px);}
+  .item .tags{order:6; flex-basis:100%;}
+  .item .tags .tag-sel{flex:1;}
+  .part-title{font-size:15px;}
+  .stat-bar{gap:6px 12px;}
+  .player{padding:9px 12px;}
+  .player-row{gap:10px;}
+  .pcover{width:40px; height:40px;}
+  .pctrls{margin-left:auto;}
+  .pmeta{display:none;}
+  .modal{padding:18px;}
+  .form-grid{grid-template-columns:1fr;}
+}
+@media(max-width:400px){
+  .top-actions .btn{font-size:12px; padding:7px 9px;}
+  .item .item-name{flex-basis:100%;}
+}
 </style>
 
 <header class="topbar">
   <div class="brand"><span class="dot">◆</span> My Concert Builder</div>
   <div class="mode-tabs">
-    <button class="mode-tab active" data-mode="build">🎫 编排</button>
-    <button class="mode-tab" data-mode="log">📖 观演记录</button>
+    <button class="mode-tab active" data-mode="build">编排</button>
+    <button class="mode-tab" data-mode="log">观演记录</button>
   </div>
   <input id="concertName" class="concert-name" placeholder="给你的演唱会起个名字…">
   <div class="top-actions" id="buildActions">
@@ -270,7 +307,7 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 <div class="overlay" id="addOverlay"><div class="modal">
   <h3>手动添加一首歌</h3><p id="addGroupHint"></p>
   <label>歌名</label><input type="text" id="addTitle" placeholder="歌名">
-  <p class="hint" style="margin-top:10px;color:var(--muted-2);font-size:12px">添加后可在歌曲行点 📁 上传本地音频。</p>
+  <p class="hint" style="margin-top:10px;color:var(--muted-2);font-size:12px">添加后可在歌曲行点「音频」上传本地音频。</p>
   <div class="modal-actions"><button class="btn btn-ghost" id="addCancel">取消</button><button class="btn btn-primary" id="addDo">添加</button></div>
 </div></div>
 
@@ -279,7 +316,9 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 const COVERS=/*__COVERS__*/{}/*__END__*/;
 const PREVIEWS=/*__PREVIEWS__*/{}/*__END__*/;
 const LIBRARY=/*__LIBRARY__*/{}/*__END__*/;
-const TAGS={stage:{label:"普通舞台",emoji:"🎤",color:"#9aa0b5"},float:{label:"花车",emoji:"🚗",color:"#ffb020"},patrol:{label:"巡场",emoji:"🏃",color:"#34d399"},fansa:{label:"饭撒·小舞台",emoji:"🎪",color:"#e879f9"}};
+const STAGES={big:{label:"大舞台",color:"#9aa0b5"},small:{label:"小舞台",color:"#e879f9"}};
+const SEGS={none:{label:"无环节",color:"#5b5b70"},patrol:{label:"巡场",color:"#34d399"},float:{label:"花车",color:"#ffb020"},fansa:{label:"饭撒",color:"#e879f9"}};
+function migrateItem(it){if(it&&it.tag!==undefined&&it.stage===undefined){const m={stage:["big","none"],float:["big","float"],patrol:["big","patrol"],fansa:["small","fansa"]}[it.tag]||["big","none"];it.stage=m[0];it.seg=m[1];delete it.tag;}return it;}
 
 const LS={state:"cbo_state_v2",audio:"cbo_audio_v1",custom:"cbo_custom_v1",log:"cbo_log_v1"};
 const $=(s,r=document)=>r.querySelector(s);
@@ -346,24 +385,24 @@ function renderLib(){
 function trackRow(tr,al){
   const row=document.createElement("div");row.className="track";row.dataset.k=key(currentGroup,al.title,tr.title);
   const on=hasAudio(currentGroup,al.title,tr.title);
-  row.innerHTML=`<div class="track-name"><div class="t">${tr.lead?'<span class="star">★</span> ':""}${esc(tr.title)}</div>${tr.title_kr?`<div class="kr">${esc(tr.title_kr)}</div>`:""}</div><span class="pill ${on?"on":"off"}">${on?"♪ 可播放":"无音源"}</span>`;
+  row.innerHTML=`<div class="track-name"><div class="t">${tr.lead?'<span class="star">★</span> ':""}${esc(tr.title)}</div>${tr.title_kr?`<div class="kr">${esc(tr.title_kr)}</div>`:""}</div><span class="pill ${on?"on":"off"}">${on?"可播放":"无音源"}</span>`;
   const play=document.createElement("button");play.className="btn mini play"+(on?" on":"");play.textContent="▶";play.disabled=!on;play.onclick=()=>playSingle(itemOf(tr,al));
-  const up=document.createElement("button");up.className="btn mini";up.textContent="📁";up.title="上传/替换本地音频";up.onclick=()=>openUpload(currentGroup,al.title,tr.title);
+  const up=document.createElement("button");up.className="btn mini";up.textContent="音频";up.title="上传/替换本地音频";up.onclick=()=>openUpload(currentGroup,al.title,tr.title);
   const add=document.createElement("button");add.className="btn mini";add.textContent="＋";add.title="加入";add.onclick=()=>addFromLib(tr,al);
   row.append(play,up,add); return row;
 }
 
 /* ---------- item 通用渲染 ---------- */
-function itemOf(tr,al){return {uid:uid(),group:currentGroup,groupName:LIBRARY[currentGroup].name,album:al.title,title:tr.title,tag:"stage"};}
+function itemOf(tr,al){return {uid:uid(),group:currentGroup,groupName:LIBRARY[currentGroup].name,album:al.title,title:tr.title,stage:"big",seg:"none"};}
 function playBtnFor(it){const on=hasAudio(it.group,it.album,it.title);const b=document.createElement("button");b.className="btn mini play"+(on?" on":"");b.textContent="▶";b.disabled=!on;b.onclick=()=>playSingle(it);return b;}
 function smallBtn(t,fn){const b=document.createElement("button");b.className="btn mini";b.textContent=t;b.onclick=fn;return b;}
 function songItem(it,arr,idx,ctx){
   const el=document.createElement("div");el.className="item";el.draggable=true;el.dataset.uid=it.uid;
   const i=document.createElement("span");i.className="idx";i.textContent=idx+1;
   const n=document.createElement("span");n.className="item-name";n.innerHTML=`${esc(it.title)} <span class="g">· ${esc(it.groupName)}</span>`;
-  const ts=document.createElement("select");ts.className="tag-sel";
-  Object.entries(TAGS).forEach(([k,t])=>{const o=document.createElement("option");o.value=k;o.textContent=`${t.emoji} ${t.label}`;if(k===it.tag)o.selected=true;ts.appendChild(o);});
-  ts.onchange=()=>{it.tag=ts.value;ctx.save();};
+  const mkSel=(map,val,on)=>{const s=document.createElement("select");s.className="tag-sel";Object.entries(map).forEach(([k,t])=>{const o=document.createElement("option");o.value=k;o.textContent=t.label;if(k===val)o.selected=true;s.appendChild(o);});s.onchange=()=>{on(s.value);ctx.save();};return s;};
+  const ts=document.createElement("span");ts.className="tags";
+  ts.append(mkSel(STAGES,it.stage||"big",v=>it.stage=v), mkSel(SEGS,it.seg||"none",v=>it.seg=v));
   const mv=document.createElement("span");mv.className="move";
   mv.append(smallBtn("▲",()=>{if(idx>0){[arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]];ctx.save();ctx.refresh();}}),
             smallBtn("▼",()=>{if(idx<arr.length-1){[arr[idx+1],arr[idx]]=[arr[idx],arr[idx+1]];ctx.save();ctx.refresh();}}));
@@ -400,7 +439,7 @@ function renderBuilder(){
     const box=document.createElement("div");box.className="part";
     const h=document.createElement("div");h.className="part-head";
     const num=document.createElement("span");num.className="part-num";num.textContent=pi+1;
-    const ti=document.createElement("input");ti.className="part-title";ti.value=p.title||`Part ${pi+1}`;ti.oninput=()=>{p.title=ti.value;persist();renderDest();};
+    const ti=document.createElement("input");ti.className="part-title";ti.value=p.title||`Part ${pi+1}`;ti.placeholder="点这里给 Part 起名";ti.title="点击可改名，如「开场高能」「安可」";ti.oninput=()=>{p.title=ti.value;persist();renderDest();};
     const c=document.createElement("span");c.className="part-count";c.textContent=`${p.items.length} 首`;
     const del=smallBtn("删除",()=>{if(concert.parts.length<=1){alert("至少保留一个 Part");return;}if(p.items.length&&!confirm(`删除「${p.title}」及其 ${p.items.length} 首歌？`))return;concert.parts=concert.parts.filter(x=>x.id!==p.id);persist();renderBuilder();});del.classList.add("btn-ghost");
     h.append(num,ti,c,del);
@@ -412,7 +451,7 @@ function renderBuilder(){
   renderStats(); markPlaying();
 }
 function collect(withNo=false){const q=[];if(concert.intro)q.push(concert.intro);concert.parts.forEach(p=>p.items.forEach(i=>q.push(i)));if(concert.outro)q.push(concert.outro);return withNo?q:q.filter(i=>hasAudio(i.group,i.album,i.title));}
-function renderStats(){const all=collect(true),wa=all.filter(i=>hasAudio(i.group,i.album,i.title)).length;const c={stage:0,float:0,patrol:0,fansa:0};concert.parts.forEach(p=>p.items.forEach(i=>c[i.tag]=(c[i.tag]||0)+1));$("#statBar").innerHTML=`<span>总曲目 <b>${all.length}</b></span><span>可播放 <b>${wa}</b></span><span>Part <b>${concert.parts.length}</b></span>`+Object.entries(TAGS).map(([k,t])=>`<span>${t.emoji} ${t.label} <b>${c[k]||0}</b></span>`).join("");}
+function renderStats(){const all=collect(true),wa=all.filter(i=>hasAudio(i.group,i.album,i.title)).length;const st={big:0,small:0},sg={patrol:0,float:0,fansa:0};concert.parts.forEach(p=>p.items.forEach(i=>{st[i.stage||"big"]=(st[i.stage||"big"]||0)+1;if(i.seg&&i.seg!=="none")sg[i.seg]=(sg[i.seg]||0)+1;}));$("#statBar").innerHTML=`<span>总曲目 <b>${all.length}</b></span><span>可播放 <b>${wa}</b></span><span>Part <b>${concert.parts.length}</b></span><span>大舞台 <b>${st.big}</b></span><span>小舞台 <b>${st.small}</b></span>`+Object.entries(SEGS).filter(([k])=>k!=="none").map(([k,t])=>`<span>${t.label} <b>${sg[k]||0}</b></span>`).join("");}
 
 /* ---------- LOG 视图 ---------- */
 function starStr(n){return "★★★★★".slice(0,n)+"☆☆☆☆☆".slice(0,5-n);}
@@ -432,7 +471,7 @@ function renderLog(){
       <div class="log-top"><span class="log-tour">${esc(r.tour||"未命名演唱会")}</span><span class="log-artist">${esc(r.artist||"")}</span></div>
       <div class="log-meta">${esc(meta||"—")}</div>
       ${r.rating?`<div class="log-stars">${starStr(r.rating)}</div>`:""}
-      <div class="log-meta">🎵 ${r.setlist?.length||0} 首${r.setlist?.length?`：${esc(r.setlist.slice(0,4).map(s=>s.title).join("、"))}${r.setlist.length>4?"…":""}`:""}</div>
+      <div class="log-meta">${r.setlist?.length||0} 首${r.setlist?.length?`：${esc(r.setlist.slice(0,4).map(s=>s.title).join("、"))}${r.setlist.length>4?"…":""}`:""}</div>
       ${r.notes?`<div class="log-notes">${esc(r.notes)}</div>`:""}
       <div class="log-actions"></div></div>`;
     const acts=card.querySelector(".log-actions");
@@ -527,7 +566,8 @@ function openUpload(g,al,t){upCtx={g,al,t};$("#upTitle").textContent=`音频：$
 
 /* ---------- modal & 导出导入 ---------- */
 function show(s){$(s).classList.add("show");} function hide(s){$(s).classList.remove("show");}
-function buildSetlistText(){const L=[];L.push(`🎤 ${concert.name||"My Concert"}`);L.push("═".repeat(24));if(concert.intro)L.push(`[INTRO] ${concert.intro.title} — ${concert.intro.groupName}`);concert.parts.forEach((p,i)=>{L.push("");L.push(`▸ ${p.title||"Part "+(i+1)}`);p.items.forEach((it,j)=>{const t=TAGS[it.tag];L.push(`   ${j+1}. ${it.title} — ${it.groupName}  ${t.emoji}${t.label}`);});});if(concert.outro){L.push("");L.push(`[OUTRO] ${concert.outro.title} — ${concert.outro.groupName}`);}return L.join("\n");}
+function tagStr(it){return [STAGES[it.stage||"big"].label,(it.seg&&it.seg!=="none")?SEGS[it.seg].label:""].filter(Boolean).join("/");}
+function buildSetlistText(){const L=[];L.push(`${concert.name||"My Concert"}`);L.push("=".repeat(24));if(concert.intro)L.push(`[INTRO] ${concert.intro.title} — ${concert.intro.groupName}`);concert.parts.forEach((p,i)=>{L.push("");L.push(`${p.title||"Part "+(i+1)}`);p.items.forEach((it,j)=>{L.push(`   ${j+1}. ${it.title} — ${it.groupName}  [${tagStr(it)}]`);});});if(concert.outro){L.push("");L.push(`[OUTRO] ${concert.outro.title} — ${concert.outro.groupName}`);}return L.join("\n");}
 function doExport(){$("#exportText").value=buildSetlistText();$("#exportJson").value=JSON.stringify({concert,custom,logs});show("#exportOverlay");}
 function copyFrom(sel){const el=$(sel);el.select();try{document.execCommand("copy");}catch{}try{navigator.clipboard?.writeText(el.value);}catch{}}
 function doImport(){try{const d=JSON.parse($("#importText").value);if(d.concert)concert=d.concert;if(d.custom){custom=d.custom;jsave(LS.custom,custom);}if(d.logs){logs=d.logs;saveLogs();}persist();$("#concertName").value=concert.name||"";renderTabs();renderLib();renderBuilder();renderLog();hide("#importOverlay");}catch{alert("解析失败，请确认是本工具导出的存档 JSON");}}
@@ -547,7 +587,9 @@ function setMode(m){
 }
 
 /* ---------- init ---------- */
+function migrateAll(){[concert.intro,concert.outro].forEach(x=>x&&migrateItem(x));concert.parts.forEach(p=>p.items.forEach(migrateItem));logs.forEach(r=>(r.setlist||[]).forEach(migrateItem));persist();saveLogs();}
 function init(){
+  migrateAll();
   $("#concertName").value=concert.name||"";
   $("#concertName").oninput=e=>{concert.name=e.target.value;persist();};
   $("#playAllBtn").onclick=playAll;
