@@ -285,6 +285,7 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 
 <div class="overlay" id="exportOverlay"><div class="modal">
   <h3 id="exTitle">导出 / 分享</h3>
+  <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:12px;cursor:pointer"><input type="checkbox" id="showTags" checked> 在海报 / 歌单里显示「舞台·环节」标签</label>
   <div class="ex-sec" id="exPoster">
     <div class="ex-h">图片海报</div>
     <img id="posterImg" class="poster-img" alt="海报预览">
@@ -357,6 +358,13 @@ const LIBRARY={"itzy":{"name":"ITZY","color":"#ff3d7f","albums":[{"title":"IT'z 
 const STAGES={big:{label:"大舞台",color:"#9aa0b5"},small:{label:"小舞台",color:"#e879f9"}};
 const SEGS={none:{label:"无环节",color:"#5b5b70"},patrol:{label:"巡场",color:"#34d399"},float:{label:"花车",color:"#ffb020"},fansa:{label:"饭撒",color:"#e879f9"}};
 function migrateItem(it){if(it&&it.tag!==undefined&&it.stage===undefined){const m={stage:["big","none"],float:["big","float"],patrol:["big","patrol"],fansa:["small","fansa"]}[it.tag]||["big","none"];it.stage=m[0];it.seg=m[1];delete it.tag;}return it;}
+function migrateRecord(r){
+  if(!r.set){r.set={intro:null,parts:[{id:uid(),title:"",items:(r.setlist||[])}],outro:null};delete r.setlist;}
+  [r.set.intro,r.set.outro].forEach(x=>x&&migrateItem(x));
+  r.set.parts.forEach(p=>p.items.forEach(migrateItem));
+  return r;
+}
+function recordItems(r){const s=r.set||{parts:[]};const q=[];if(s.intro)q.push(s.intro);(s.parts||[]).forEach(p=>p.items.forEach(i=>q.push(i)));if(s.outro)q.push(s.outro);return q;}
 
 const LS={state:"cbo_state_v2",audio:"cbo_audio_v1",custom:"cbo_custom_v1",log:"cbo_log_v1"};
 const $=(s,r=document)=>r.querySelector(s);
@@ -372,6 +380,7 @@ let logs=jload(LS.log,[]);
 let currentGroup="itzy";
 let mode="build";
 let editing=null;               // log record being edited (object) or null
+let logDest="intro";            // 观演记录编辑时「添加到」的目标
 let concert=jload(LS.state,null)||{name:"",intro:null,parts:[{id:uid(),title:"Part 1",items:[]}],outro:null};
 const persist=()=>{jsave(LS.state,concert);scheduleCloudPush();};
 const saveLogs=()=>{jsave(LS.log,logs);scheduleCloudPush();};
@@ -460,7 +469,11 @@ function addFromLib(tr,al){
     const d=$("#destSelect").value;
     if(d==="intro")concert.intro=it; else if(d==="outro")concert.outro=it; else{const p=concert.parts.find(p=>p.id===d);if(p)p.items.push(it);}
     persist(); renderBuilder();
-  } else if(editing){ editing.setlist.push(it); saveLogs(); renderEditor(); }
+  } else if(editing){
+    const s=editing.set, d=logDest;
+    if(d==="intro")s.intro=it; else if(d==="outro")s.outro=it; else{const p=s.parts.find(p=>p.id===d)||s.parts[s.parts.length-1];if(p)p.items.push(it);}
+    saveLogs(); renderEditor();
+  }
   else { alert("先新建或打开一条观演记录，再从曲库添加当晚的歌。"); }
 }
 
@@ -509,19 +522,19 @@ function renderLog(){
       <div class="log-top"><span class="log-tour">${esc(r.tour||"未命名演唱会")}</span><span class="log-artist">${esc(r.artist||"")}</span></div>
       <div class="log-meta">${esc(meta||"—")}</div>
       ${r.rating?`<div class="log-stars">${starStr(r.rating)}</div>`:""}
-      <div class="log-meta">${r.setlist?.length||0} 首${r.setlist?.length?`：${esc(r.setlist.slice(0,4).map(s=>s.title).join("、"))}${r.setlist.length>4?"…":""}`:""}</div>
+      <div class="log-meta">${recordItems(r).length} 首${recordItems(r).length?`：${esc(recordItems(r).slice(0,4).map(s=>s.title).join("、"))}${recordItems(r).length>4?"…":""}`:""}</div>
       ${r.notes?`<div class="log-notes">${esc(r.notes)}</div>`:""}
       <div class="log-actions"></div></div>`;
     const acts=card.querySelector(".log-actions");
-    const playable=(r.setlist||[]).filter(s=>hasAudio(s.group,s.album,s.title));
+    const playable=recordItems(r).filter(s=>hasAudio(s.group,s.album,s.title));
     const pb=smallBtn("▶ 播放这场",()=>{if(!playable.length){alert("这场的曲目没有可播放的片段。");return;}startQueue(playable,0);});pb.className="btn mini play on";
     acts.append(pb, smallBtn("编辑",()=>openEditor(r.id)), smallBtn("导出 / 分享",()=>openExport(recordProgram(r))),
       (()=>{const d=smallBtn("删除",()=>{if(confirm("删除这条观演记录？")){logs=logs.filter(x=>x.id!==r.id);saveLogs();renderLog();}});d.classList.add("btn-ghost");return d;})());
     wrap.appendChild(card);
   });
 }
-function openEditor(id){editing = id?logs.find(r=>r.id===id):{id:uid(),artist:LIBRARY[currentGroup].name,tour:"",date:"",city:"",venue:"",rating:0,notes:"",setlist:[],_new:!id};
-  if(!id){/* new: not yet in logs */} renderAddCtx(); renderEditor();}
+function openEditor(id){editing = id?logs.find(r=>r.id===id):{id:uid(),artist:LIBRARY[currentGroup].name,tour:"",date:"",city:"",venue:"",rating:0,notes:"",set:{intro:null,parts:[{id:uid(),title:"",items:[]}],outro:null},_new:!id};
+  migrateRecord(editing); logDest="p0"; renderAddCtx(); renderEditor();}
 function renderEditor(){
   $("#logListWrap").classList.add("hidden"); const box=$("#logEditor"); box.classList.remove("hidden"); box.innerHTML="";
   const r=editing;
@@ -535,10 +548,10 @@ function renderEditor(){
     <div><label class="flabel">团 / 艺人</label><select class="fld" id="f_artist">${groupOpts}</select></div>
     <div><label class="flabel">巡演 / 演唱会名</label><input class="fld" id="f_tour" value="${esc(r.tour||"")}" placeholder="如 BORN TO BE World Tour"></div>
     <div><label class="flabel">日期</label><input class="fld" type="date" id="f_date" value="${esc(r.date||"")}"></div>
-    <div><label class="flabel">城市</label><input class="fld" id="f_city" value="${esc(r.city||"")}" placeholder="如 上海"></div>
-    <div><label class="flabel">场馆</label><input class="fld" id="f_venue" value="${esc(r.venue||"")}" placeholder="如 梅赛德斯奔驰文化中心"></div>
+    <div><label class="flabel">城市</label><input class="fld" id="f_city" value="${esc(r.city||"")}" ></div>
+    <div><label class="flabel">场馆</label><input class="fld" id="f_venue" value="${esc(r.venue||"")}" ></div>
     <div><label class="flabel">评分</label><div class="stars-input" id="f_stars"></div></div>
-    <div class="full"><label class="flabel">感想</label><textarea class="fld" id="f_notes" placeholder="那晚的感受、名场面、solo、ment…">${esc(r.notes||"")}</textarea></div>`;
+    <div class="full"><label class="flabel">感想</label><textarea class="fld" id="f_notes">${esc(r.notes||"")}</textarea></div>`;
   box.appendChild(grid);
   // stars
   const sc=grid.querySelector("#f_stars");
@@ -547,14 +560,35 @@ function renderEditor(){
   // bind fields
   const bind=(id,k)=>{grid.querySelector(id).addEventListener("input",e=>{r[k]=e.target.value; if(id==="#f_tour"||id==="#f_artist")renderAddCtx();});};
   bind("#f_artist","artist");bind("#f_tour","tour");bind("#f_date","date");bind("#f_city","city");bind("#f_venue","venue");bind("#f_notes","notes");
-  // setlist
-  const sl=document.createElement("div");sl.className="slot-block";
-  sl.innerHTML=`<div class="slot-label">当晚曲目单（从左侧曲库点 ＋ 添加）</div>`;
-  const items=document.createElement("div");items.className="part-items";items.style.border="1px solid var(--line)";items.style.borderRadius="12px";
+  // ---- 当晚曲目单（Intro / 可命名 Part / Encore，均可留空）----
   const ctx={save:saveLogs,refresh:renderEditor};
-  if(!r.setlist.length){const e=document.createElement("div");e.className="part-empty";e.textContent="还没记曲目 — 从左边曲库点 ＋ 加进来";items.appendChild(e);}
-  else r.setlist.forEach((it,idx)=>items.appendChild(songItem(it,r.setlist,idx,ctx)));
-  sl.appendChild(items);box.appendChild(sl);
+  const s=r.set;
+  const hint=document.createElement("div");hint.className="slot-label";hint.style.margin="4px 0 10px";hint.textContent="当晚曲目单 — 从左侧曲库点 ＋ 添加；Intro / Part 名 / Encore 都可留空";box.appendChild(hint);
+  const destWrap=document.createElement("label");destWrap.className="dest";destWrap.style.marginBottom="10px";destWrap.innerHTML="添加到 ";
+  const dsel=document.createElement("select");
+  const addOpt=(v,l)=>{const o=document.createElement("option");o.value=v;o.textContent=l;dsel.appendChild(o);};
+  addOpt("intro","Intro");s.parts.forEach((p,i)=>addOpt(p.id,p.title||`Part ${i+1}`));addOpt("outro","Encore");
+  if([...dsel.options].some(o=>o.value===logDest))dsel.value=logDest;else{logDest=s.parts.length?s.parts.at(-1).id:"intro";dsel.value=logDest;}
+  dsel.onchange=()=>{logDest=dsel.value;};destWrap.appendChild(dsel);box.appendChild(destWrap);
+  const recSlot=(item,kind,ph)=>{const el=document.createElement("div");el.className="slot "+kind;if(item){const d=document.createElement("div");d.className="item";d.innerHTML=`<span class="item-name">${esc(item.title)} <span class="g">· ${esc(item.groupName)}</span></span>`;d.append(playBtnFor(item),smallBtn("✕",()=>{if(kind==="intro")s.intro=null;else s.outro=null;saveLogs();renderEditor();}));el.appendChild(d);}else el.textContent=ph;return el;};
+  const bIntro=document.createElement("div");bIntro.className="slot-block";bIntro.innerHTML=`<div class="slot-label">INTRO（可留空）</div>`;bIntro.appendChild(recSlot(s.intro,"intro","空 — 选「添加到 Intro」再从曲库点 ＋"));box.appendChild(bIntro);
+  const pw=document.createElement("div");pw.className="parts-wrap";
+  s.parts.forEach((p,pi)=>{
+    const bx=document.createElement("div");bx.className="part";
+    const h=document.createElement("div");h.className="part-head";
+    const num=document.createElement("span");num.className="part-num";num.textContent=pi+1;
+    const ti=document.createElement("input");ti.className="part-title";ti.value=p.title||"";ti.placeholder=`Part ${pi+1} 名称（可留空）`;ti.oninput=()=>{p.title=ti.value;saveLogs();};ti.onblur=()=>renderEditor();
+    const c=document.createElement("span");c.className="part-count";c.textContent=`${p.items.length} 首`;
+    const del=smallBtn("删除",()=>{if(s.parts.length<=1){s.parts[0].items=[];saveLogs();renderEditor();return;}if(p.items.length&&!confirm("删除该 Part 及其歌曲？"))return;s.parts=s.parts.filter(x=>x.id!==p.id);saveLogs();renderEditor();});del.classList.add("btn-ghost");
+    h.append(num,ti,c,del);
+    const items=document.createElement("div");items.className="part-items";
+    if(!p.items.length){const e=document.createElement("div");e.className="part-empty";e.textContent="从左边曲库点 ＋ 加进来";items.appendChild(e);}
+    else p.items.forEach((it,idx)=>items.appendChild(songItem(it,p.items,idx,ctx)));
+    bx.append(h,items);pw.appendChild(bx);
+  });
+  box.appendChild(pw);
+  const addPart=smallBtn("＋ 添加一个 Part",()=>{s.parts.push({id:uid(),title:"",items:[]});saveLogs();renderEditor();});addPart.className="btn btn-ghost";addPart.style.width="100%";box.appendChild(addPart);
+  const bEnc=document.createElement("div");bEnc.className="slot-block";bEnc.style.marginTop="12px";bEnc.innerHTML=`<div class="slot-label">ENCORE 安可（可留空）</div>`;bEnc.appendChild(recSlot(s.outro,"outro","空 — 选「添加到 Encore」再从曲库点 ＋"));box.appendChild(bEnc);
   // actions
   const acts=document.createElement("div");acts.className="modal-actions";acts.style.justifyContent="space-between";
   const delBtn=smallBtn("删除这条",()=>{if(r._new){editing=null;renderLog();return;}if(confirm("删除这条观演记录？")){logs=logs.filter(x=>x.id!==r.id);saveLogs();editing=null;renderLog();}});delBtn.classList.add("btn-ghost");
@@ -588,12 +622,22 @@ function allItems(prog){return (prog.sections||[]).flatMap(s=>s.items);}
 function groupsIn(sections){return [...new Set((sections||[]).flatMap(s=>s.items).map(i=>i.groupName||i.group))];}
 function tagStr(it){return [STAGES[it.stage||"big"].label,(it.seg&&it.seg!=="none")?SEGS[it.seg].label:""].filter(Boolean).join("/");}
 function buildProgram(){const sections=[];if(concert.intro)sections.push({label:"INTRO",items:[concert.intro]});concert.parts.forEach((p,i)=>sections.push({label:p.title||`PART ${i+1}`,items:p.items}));if(concert.outro)sections.push({label:"ENCORE",items:[concert.outro]});return {kind:"build",title:concert.name||"MY CONCERT",subtitle:groupsIn(sections).join(" · "),sections};}
-function recordProgram(r){const sub=[r.artist,r.date,[r.city,r.venue].filter(Boolean).join(" ")].filter(Boolean).join(" · ");return {kind:"record",title:r.tour||"演唱会",subtitle:sub,rating:r.rating,notes:r.notes,sections:[{label:"SETLIST",items:r.setlist||[]}]};}
-function programText(prog){const L=[];L.push(prog.title);if(prog.subtitle)L.push(prog.subtitle);L.push("=".repeat(24));prog.sections.forEach(s=>{L.push("");L.push(s.label);s.items.forEach((it,j)=>L.push(`   ${j+1}. ${it.title} — ${it.groupName}  [${tagStr(it)}]`));});return L.join("\n");}
+function recordProgram(r){
+  const sub=[r.artist,r.date,[r.city,r.venue].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
+  const s=r.set||{parts:[]}, sections=[];
+  if(s.intro)sections.push({label:"INTRO",items:[s.intro]});
+  (s.parts||[]).forEach((p,i)=>{if(p.items.length)sections.push({label:p.title||`PART ${i+1}`,items:p.items});});
+  if(s.outro)sections.push({label:"ENCORE",items:[s.outro]});
+  if(!sections.length)sections.push({label:"SETLIST",items:[]});
+  return {kind:"record",title:r.tour||"演唱会",subtitle:sub,rating:r.rating,notes:r.notes,sections};
+}
+const showTagsOn=()=>{const c=$("#showTags");return c?c.checked:true;};
+function programText(prog){const tg=showTagsOn();const L=[];L.push(prog.title);if(prog.subtitle)L.push(prog.subtitle);L.push("=".repeat(24));prog.sections.forEach(s=>{L.push("");L.push(s.label);s.items.forEach((it,j)=>L.push(`   ${j+1}. ${it.title} — ${it.groupName}${tg?`  [${tagStr(it)}]`:""}`));});return L.join("\n");}
 function programPairs(prog){return allItems(prog).map(it=>`${it.groupName||it.group} - ${it.title}`);}
 
-let amLinks=[], posterUrl="";
+let amLinks=[], posterUrl="", exportProg=null;
 function openExport(prog){
+  exportProg=prog;
   const archive=prog.kind==="archive";
   $("#exPoster").classList.toggle("hidden",archive);
   $("#exMusic").classList.toggle("hidden",archive);
@@ -644,13 +688,18 @@ async function drawPoster(prog){
     g.fillText(String(s.label).toUpperCase(),pad,y+30);
     g.strokeStyle="rgba(255,255,255,0.09)"; g.lineWidth=1; g.beginPath(); g.moveTo(pad,y+48); g.lineTo(W-pad,y+48); g.stroke();
     y+=secLabelH;
+    const tg=showTagsOn();
     s.items.forEach((it,i)=>{
       g.fillStyle="#6f6e86"; g.font='600 24px Archivo'; g.fillText(String(i+1).padStart(2,"0"),pad,y+34);
-      const chip=tagStr(it); g.font='600 22px Archivo'; const cw=g.measureText(chip).width+28, chx=W-pad-cw;
-      g.fillStyle="#edecf3"; g.font='600 27px Archivo'; g.fillText(fitText(g,it.title,chx-(pad+52)-18),pad+52,y+34);
-      const col=(it.seg&&it.seg!=="none")?SEGS[it.seg].color:STAGES[it.stage||"big"].color;
-      g.fillStyle=col+"26"; roundRect(g,chx,y+9,cw,36,18); g.fill();
-      g.fillStyle=col; g.font='600 22px Archivo'; g.fillText(chip,chx+14,y+33);
+      if(tg){
+        const chip=tagStr(it); g.font='600 22px Archivo'; const cw=g.measureText(chip).width+28, chx=W-pad-cw;
+        g.fillStyle="#edecf3"; g.font='600 27px Archivo'; g.fillText(fitText(g,it.title,chx-(pad+52)-18),pad+52,y+34);
+        const col=(it.seg&&it.seg!=="none")?SEGS[it.seg].color:STAGES[it.stage||"big"].color;
+        g.fillStyle=col+"26"; roundRect(g,chx,y+9,cw,36,18); g.fill();
+        g.fillStyle=col; g.font='600 22px Archivo'; g.fillText(chip,chx+14,y+33);
+      } else {
+        g.fillStyle="#edecf3"; g.font='600 27px Archivo'; g.fillText(fitText(g,it.title,W-pad-(pad+52)),pad+52,y+34);
+      }
       y+=lineH;
     });
     y+=secGap;
@@ -734,7 +783,7 @@ function setMode(m){
 }
 
 /* ---------- init ---------- */
-function migrateAll(){[concert.intro,concert.outro].forEach(x=>x&&migrateItem(x));concert.parts.forEach(p=>p.items.forEach(migrateItem));logs.forEach(r=>(r.setlist||[]).forEach(migrateItem));persist();saveLogs();}
+function migrateAll(){[concert.intro,concert.outro].forEach(x=>x&&migrateItem(x));concert.parts.forEach(p=>p.items.forEach(migrateItem));logs.forEach(migrateRecord);persist();saveLogs();}
 function init(){
   migrateAll();
   $("#concertName").value=concert.name||"";
@@ -760,6 +809,7 @@ function init(){
   $("#toSDZ").onclick=()=>{copyStr($("#pairText").value);window.open("https://soundiiz.com/","_blank");flash("#toSDZ","已复制，去粘贴 →");};
   $("#pairCopy").onclick=()=>{copyStr($("#pairText").value);flash("#pairCopy","已复制 ✓");};
   $("#amCopy").onclick=()=>{if(!amLinks.length){alert("没有可复制的链接");return;}copyStr(amLinks.join("\n"));flash("#amCopy","已复制 ✓");};
+  $("#showTags").onchange=()=>{if(!exportProg||exportProg.kind==="archive")return;$("#exportText").value=programText(exportProg);posterUrl="";$("#posterImg").removeAttribute("src");drawPoster(exportProg).then(u=>{posterUrl=u;$("#posterImg").src=u;}).catch(()=>{});};
   $("#exportClose").onclick=()=>hide("#exportOverlay");
   $("#copyText").onclick=()=>copyFrom("#exportText"); $("#copyJson").onclick=()=>copyFrom("#exportJson");
   $("#importCancel").onclick=()=>hide("#importOverlay"); $("#importDo").onclick=doImport;
