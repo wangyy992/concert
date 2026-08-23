@@ -238,10 +238,16 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 </div></div>
 
 <div class="overlay" id="amOverlay"><div class="modal">
-  <h3>导出到 Apple Music</h3>
-  <p>点每首右侧按钮在 Apple Music 打开、加进资料库；或「复制全部链接」。（静态网页无法自动建歌单，这是最直接的方式。）</p>
+  <h3>导出歌单</h3>
+  <p><b>方式 A · 自动建歌单（推荐，AM / 网易云都行）</b><br>复制下面的「歌手 - 歌名」列表，打开
+  <a href="https://www.tunemymusic.com/zh/transfer" target="_blank" rel="noopener" style="color:var(--lsf)">TuneMyMusic</a> 或
+  <a href="https://soundiiz.com" target="_blank" rel="noopener" style="color:var(--lsf)">Soundiiz</a>，选「文本/Text」粘贴 → 登录你的 Apple Music 或网易云 → 一键建好整张歌单。</p>
+  <textarea id="amText" readonly style="width:100%;min-height:120px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:10px 12px;font-size:12px;font-family:ui-monospace,monospace;resize:vertical"></textarea>
+  <button class="btn mini" id="amTextCopy" style="margin-top:6px">复制歌单列表</button>
+  <p style="margin-top:16px"><b>方式 B · Apple Music 逐首直达</b><br>点每首「在 Apple Music 打开」加进资料库，或复制全部链接。</p>
   <div class="am-list" id="amList"></div>
-  <div class="modal-actions"><button class="btn" id="amCopy">复制全部链接</button><button class="btn btn-primary" id="amClose">完成</button></div>
+  <button class="btn mini" id="amCopy" style="margin-top:6px">复制全部 Apple Music 链接</button>
+  <div class="modal-actions"><button class="btn btn-primary" id="amClose">完成</button></div>
 </div></div>
 
 <div class="overlay" id="exportOverlay"><div class="modal">
@@ -502,6 +508,7 @@ au.addEventListener("loadedmetadata",()=>{$("#pDur").textContent=fmt(au.duration
 let amLinks=[];
 function openAM(items){
   const list=$("#amList");list.innerHTML="";amLinks=[];
+  $("#amText").value=(items||[]).map(it=>`${it.groupName||it.group} - ${it.title}`).join("\n");
   if(!items||!items.length){list.innerHTML=`<div class="am-row"><span class="miss">没有曲目</span></div>`;}
   items.forEach(it=>{
     const url=amOf(it.group,it.album,it.title);
@@ -560,7 +567,9 @@ function init(){
   $("#upClear").onclick=()=>{if(upCtx){delete userAudio[key(upCtx.g,upCtx.al,upCtx.t)];jsave(LS.audio,userAudio);}hide("#upOverlay");renderLib();};
   $("#upCancel").onclick=()=>hide("#upOverlay");
   $("#amClose").onclick=()=>hide("#amOverlay");
-  $("#amCopy").onclick=()=>{if(!amLinks.length){alert("没有可复制的链接");return;}const t=amLinks.join("\n");try{navigator.clipboard?.writeText(t);}catch{}const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");}catch{}ta.remove();$("#amCopy").textContent="已复制 ✓";setTimeout(()=>$("#amCopy").textContent="复制全部链接",1500);};
+  const copyStr=(t)=>{try{navigator.clipboard?.writeText(t);}catch{}const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");}catch{}ta.remove();};
+  $("#amCopy").onclick=()=>{if(!amLinks.length){alert("没有可复制的链接");return;}copyStr(amLinks.join("\n"));$("#amCopy").textContent="已复制 ✓";setTimeout(()=>$("#amCopy").textContent="复制全部 Apple Music 链接",1500);};
+  $("#amTextCopy").onclick=()=>{const v=$("#amText").value;if(!v){alert("没有曲目");return;}copyStr(v);$("#amTextCopy").textContent="已复制 ✓";setTimeout(()=>$("#amTextCopy").textContent="复制歌单列表",1500);};
   $("#exportClose").onclick=()=>hide("#exportOverlay");
   $("#copyText").onclick=()=>copyFrom("#exportText"); $("#copyJson").onclick=()=>copyFrom("#exportJson");
   $("#importCancel").onclick=()=>hide("#importOverlay"); $("#importDo").onclick=doImport;
