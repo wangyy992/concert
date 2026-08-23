@@ -1,0 +1,574 @@
+<title>My Concert Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
+
+<style>
+:root{
+  --bg:#0b0b12; --panel:#14141f; --panel-2:#1b1b28; --panel-3:#22222f;
+  --line:#2c2c3d; --line-soft:#232332;
+  --text:#edecf3; --muted:#9695ad; --muted-2:#6f6e86;
+  --itzy:#ff3d7f; --lsf:#5b86ff; --good:#34d399; --gold:#ffcb45;
+  --r:14px; --r-sm:9px;
+  --disp:"Bricolage Grotesque","Archivo",system-ui,sans-serif;
+  --body:"Archivo",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{background:var(--bg); color:var(--text); font-family:var(--body); font-size:14px; line-height:1.45; padding-bottom:108px; min-height:100vh;
+  background-image:radial-gradient(60vw 40vh at 15% -10%,rgba(255,61,127,.16),transparent 70%),radial-gradient(60vw 40vh at 85% -10%,rgba(91,134,255,.16),transparent 70%);
+  background-attachment:fixed;}
+::selection{background:rgba(255,61,127,.35);}
+h1,h2,h3{font-family:var(--disp); margin:0; letter-spacing:-.01em;}
+button,input,select,textarea{font-family:inherit;}
+
+.topbar{position:sticky; top:0; z-index:40; display:flex; align-items:center; gap:14px; padding:14px 22px; background:rgba(11,11,18,.72); backdrop-filter:blur(14px); border-bottom:1px solid var(--line); flex-wrap:wrap;}
+.brand{font-family:var(--disp); font-weight:800; font-size:20px; white-space:nowrap; display:flex; align-items:center; gap:9px;}
+.brand .dot{background:linear-gradient(120deg,var(--itzy),var(--lsf)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.mode-tabs{display:flex; gap:4px; background:var(--panel-2); border:1px solid var(--line); border-radius:22px; padding:3px;}
+.mode-tab{padding:6px 14px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:600; border:none; background:transparent; color:var(--muted);}
+.mode-tab.active{background:linear-gradient(120deg,var(--itzy),var(--lsf)); color:#fff;}
+.concert-name{flex:1; min-width:120px; background:var(--panel-2); border:1px solid var(--line); color:var(--text); padding:10px 14px; border-radius:var(--r-sm); font-size:15px; font-weight:500;}
+.concert-name::placeholder{color:var(--muted-2);}
+.concert-name:focus{outline:none; border-color:var(--itzy);}
+.top-actions{display:flex; gap:8px; margin-left:auto;}
+
+.btn{background:var(--panel-2); border:1px solid var(--line); color:var(--text); padding:9px 14px; border-radius:var(--r-sm); cursor:pointer; font-size:13px; font-weight:500; transition:.15s; white-space:nowrap;}
+.btn:hover{border-color:var(--muted); background:var(--panel-3);}
+.btn:focus-visible{outline:2px solid var(--lsf); outline-offset:2px;}
+.btn-primary{background:linear-gradient(120deg,var(--itzy),#ff5c93); border:none; color:#fff; font-weight:700; box-shadow:0 4px 18px rgba(255,61,127,.35);}
+.btn-primary:hover{filter:brightness(1.07);}
+.btn-am{background:#fa2d48; border:none; color:#fff; font-weight:700;}
+.btn-am:hover{filter:brightness(1.08);}
+.btn-ghost{background:transparent;}
+.btn.mini{padding:4px 9px; font-size:12px; border-radius:7px;}
+.btn.mini.play.on{color:var(--good); border-color:rgba(52,211,153,.4);}
+.btn[disabled]{opacity:.4; cursor:not-allowed;}
+
+.layout{display:grid; grid-template-columns:1fr 1.05fr; gap:18px; padding:20px 22px; max-width:1440px; margin:0 auto;}
+@media(max-width:920px){.layout{grid-template-columns:1fr;}}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:16px;}
+.panel-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap;}
+.panel-head h2{font-size:15px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); font-weight:600; font-family:var(--body);}
+
+.group-tabs{display:flex; gap:7px;}
+.group-tab{padding:6px 15px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:600; border:1px solid var(--line); background:var(--panel-2); color:var(--muted); transition:.15s;}
+.group-tab.active{color:#fff; border-color:transparent;}
+.search{width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text); padding:10px 14px; border-radius:var(--r-sm); margin-bottom:12px;}
+.search:focus{outline:none; border-color:var(--lsf);}
+.search::placeholder{color:var(--muted-2);}
+
+.add-ctx{font-size:12px; color:var(--muted); background:var(--panel-2); border:1px solid var(--line-soft); border-radius:8px; padding:7px 11px; margin-bottom:10px;}
+.add-ctx b{color:var(--itzy);}
+
+.album-list{display:flex; flex-direction:column; gap:9px; max-height:60vh; overflow-y:auto; padding-right:5px;}
+.album-list::-webkit-scrollbar{width:9px;} .album-list::-webkit-scrollbar-thumb{background:var(--line); border-radius:20px;}
+.album{border:1px solid var(--line-soft); border-radius:12px; overflow:hidden; background:var(--panel-2); flex:0 0 auto;}
+.album-head{display:flex; align-items:center; gap:13px; padding:12px 14px; cursor:pointer; min-height:66px;}
+.album-head:hover{background:var(--panel-3);}
+.album-cover{width:52px; height:52px; border-radius:9px; flex:none; object-fit:cover; display:block; box-shadow:0 2px 8px rgba(0,0,0,.35);}
+.album-cover-fallback{display:grid; place-items:center; font-family:var(--disp); font-weight:800; font-size:19px; color:#fff;}
+.album-meta{flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;}
+.album-title{font-weight:700; font-size:14.5px; line-height:1.25; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.album-sub{color:var(--muted); font-size:12px; letter-spacing:.02em; line-height:1.2;}
+.album-caret{color:var(--muted-2); transition:.2s;} .album.open .album-caret{transform:rotate(180deg);}
+.track-list{border-top:1px solid var(--line-soft); display:none;} .album.open .track-list{display:block;}
+.track{display:flex; align-items:center; gap:7px; padding:8px 13px; border-bottom:1px solid rgba(255,255,255,.035);}
+.track:last-child{border-bottom:none;} .track:hover{background:rgba(255,255,255,.03);}
+.track.playing{background:rgba(255,61,127,.1);}
+.track-name{flex:1; min-width:0;}
+.track-name .t{font-size:13px; font-weight:500;} .track-name .t .star{color:var(--itzy);}
+.track-name .kr{color:var(--muted-2); font-size:11px;}
+.pill{font-size:10.5px; padding:2px 8px; border-radius:20px; white-space:nowrap; font-weight:600; letter-spacing:.02em;}
+.pill.on{color:var(--good); background:rgba(52,211,153,.12); border:1px solid rgba(52,211,153,.3);}
+.pill.off{color:var(--muted-2); background:transparent; border:1px solid var(--line);}
+
+.dest{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:13px;}
+.dest select,.tag-sel,.fld{background:var(--panel-2); border:1px solid var(--line); color:var(--text); padding:7px 9px; border-radius:8px; font-size:13px;}
+.dest select:focus,.fld:focus{outline:none; border-color:var(--lsf);}
+
+.slot-block{margin-bottom:14px;}
+.slot-label{font-family:var(--disp); font-size:11px; letter-spacing:.3em; color:var(--muted-2); margin-bottom:7px; font-weight:800;}
+.slot{min-height:50px; border:1px dashed var(--line); border-radius:12px; display:flex; align-items:center; padding:9px 13px; color:var(--muted-2); font-size:13px;}
+.slot.intro{border-color:rgba(255,61,127,.4);} .slot.outro{border-color:rgba(91,134,255,.4);}
+.parts-wrap{display:flex; flex-direction:column; gap:14px; margin-bottom:14px;}
+.part{border:1px solid var(--line); border-radius:12px; background:var(--panel-2); overflow:hidden;}
+.part-head{display:flex; align-items:center; gap:9px; padding:10px 13px; border-bottom:1px solid var(--line); background:var(--panel-3);}
+.part-num{font-family:var(--disp); font-weight:800; font-size:12px; color:var(--bg); background:linear-gradient(120deg,var(--itzy),var(--lsf)); width:24px; height:24px; border-radius:7px; display:grid; place-items:center; flex:none;}
+.part-title{flex:1; background:transparent; border:none; color:var(--text); font-weight:700; font-size:14px; border-bottom:1px dashed transparent; padding:2px 0;}
+.part-title:focus{outline:none; border-bottom-color:var(--itzy);}
+.part-count{color:var(--muted-2); font-size:12px; margin-right:6px; font-variant-numeric:tabular-nums;}
+.part-items{padding:8px; display:flex; flex-direction:column; gap:6px; min-height:34px;}
+.part-empty{color:var(--muted-2); font-size:12px; text-align:center; padding:12px;}
+.item{display:flex; align-items:center; gap:9px; padding:7px 10px; background:var(--panel); border:1px solid var(--line); border-radius:9px;}
+.item.dragging{opacity:.4;} .item.playing{border-color:var(--itzy); box-shadow:0 0 0 1px var(--itzy) inset;}
+.item .idx{color:var(--muted-2); font-size:11px; width:16px; text-align:center; font-variant-numeric:tabular-nums;}
+.item-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:500;}
+.item-name .g{color:var(--muted-2); font-size:11px; font-weight:400;}
+.move{display:flex; flex-direction:column; gap:1px;} .move button{line-height:1; padding:1px 5px; font-size:9px; border-radius:5px;}
+.slot .item{flex:1;}
+.stat-bar{margin-top:16px; padding-top:14px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; display:flex; gap:8px 16px; flex-wrap:wrap; align-items:center;}
+.stat-bar b{color:var(--text); font-variant-numeric:tabular-nums;}
+.add-song{width:100%; margin-top:12px;}
+
+/* log */
+.log-list{display:flex; flex-direction:column; gap:12px;}
+.log-empty{color:var(--muted); text-align:center; padding:40px 12px; font-size:13px;}
+.log-card{display:flex; gap:0; border:1px solid var(--line); border-radius:12px; background:var(--panel-2); overflow:hidden;}
+.log-stripe{width:6px; flex:none;}
+.log-body{flex:1; min-width:0; padding:13px 15px;}
+.log-top{display:flex; align-items:baseline; gap:9px; flex-wrap:wrap;}
+.log-tour{font-family:var(--disp); font-weight:800; font-size:16px;}
+.log-artist{color:var(--muted); font-size:13px; font-weight:600;}
+.log-meta{color:var(--muted); font-size:12.5px; margin-top:3px;}
+.log-stars{color:var(--gold); font-size:13px; letter-spacing:1px;}
+.log-notes{color:var(--muted); font-size:12.5px; margin-top:7px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+.log-actions{display:flex; gap:7px; margin-top:11px; flex-wrap:wrap;}
+.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:14px;}
+@media(max-width:560px){.form-grid{grid-template-columns:1fr;}}
+.form-grid .full{grid-column:1/-1;}
+.fld{width:100%;} label.flabel{display:block; font-size:11px; color:var(--muted); margin-bottom:5px; letter-spacing:.03em;}
+.stars-input{display:flex; gap:3px; font-size:22px; cursor:pointer;}
+.stars-input span{color:var(--muted-2); transition:.1s;} .stars-input span.on{color:var(--gold);}
+textarea.fld{min-height:70px; resize:vertical;}
+
+/* player */
+.player{position:fixed; bottom:0; left:0; right:0; z-index:40; background:rgba(16,16,24,.94); backdrop-filter:blur(14px); border-top:1px solid var(--line); padding:12px 22px;}
+.player-row{display:flex; align-items:center; gap:16px; max-width:1440px; margin:0 auto;}
+.pcover{width:46px; height:46px; border-radius:8px; object-fit:cover; flex:none; background:var(--panel-3); box-shadow:0 2px 8px rgba(0,0,0,.4);}
+.pinfo{min-width:150px; max-width:230px;}
+.pnow{font-family:var(--disp); font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.psub{color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.pctrls{display:flex; align-items:center; gap:8px;}
+.pbtn{width:36px; height:36px; border-radius:50%; border:1px solid var(--line); background:var(--panel-2); color:var(--text); cursor:pointer; font-size:14px; display:grid; place-items:center;}
+.pbtn:hover{border-color:var(--muted);}
+.pbtn.main{width:44px; height:44px; background:linear-gradient(120deg,var(--itzy),#ff5c93); border:none; color:#fff; font-size:17px; box-shadow:0 4px 16px rgba(255,61,127,.4);}
+.pseek{flex:1; display:flex; align-items:center; gap:10px;}
+.ptime{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; min-width:34px; text-align:center;}
+input[type=range].bar{-webkit-appearance:none; appearance:none; flex:1; height:5px; border-radius:5px; background:var(--line); cursor:pointer;}
+input[type=range].bar::-webkit-slider-thumb{-webkit-appearance:none; width:13px; height:13px; border-radius:50%; background:var(--itzy); box-shadow:0 0 0 3px rgba(255,61,127,.25);}
+input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; border-radius:50%; background:var(--itzy);}
+.pmeta{font-size:11px; color:var(--muted-2); white-space:nowrap;}
+@media(max-width:760px){.pseek{display:none;} .pinfo{max-width:none;}}
+
+.overlay{position:fixed; inset:0; z-index:60; background:rgba(5,5,10,.72); display:none; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);}
+.overlay.show{display:flex;}
+.modal{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:22px; max-width:600px; width:100%; max-height:86vh; overflow:auto;}
+.modal h3{font-size:18px; margin-bottom:6px;}
+.modal p{color:var(--muted); font-size:13px; margin:0 0 14px;}
+.modal label{display:block; font-size:12px; color:var(--muted); margin:12px 0 5px; letter-spacing:.02em;}
+.modal input[type=text],.modal textarea{width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text); padding:10px 12px; border-radius:var(--r-sm); font-size:13px;}
+.modal textarea{min-height:120px; resize:vertical; font-family:ui-monospace,monospace; font-size:12px;}
+.modal input:focus,.modal textarea:focus{outline:none; border-color:var(--lsf);}
+.modal-actions{display:flex; gap:9px; justify-content:flex-end; margin-top:18px; flex-wrap:wrap;}
+.am-list{display:flex; flex-direction:column; gap:6px; max-height:300px; overflow:auto; margin-top:6px;}
+.am-row{display:flex; align-items:center; gap:9px; padding:7px 10px; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; font-size:13px;}
+.am-row .n{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.am-row a{color:#fff; text-decoration:none; background:#fa2d48; padding:4px 10px; border-radius:7px; font-size:12px; font-weight:600;}
+.am-row .miss{color:var(--muted-2); font-size:12px;}
+.hidden{display:none!important;}
+</style>
+
+<header class="topbar">
+  <div class="brand"><span class="dot">◆</span> My Concert Builder</div>
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="build">🎫 编排</button>
+    <button class="mode-tab" data-mode="log">📖 观演记录</button>
+  </div>
+  <input id="concertName" class="concert-name" placeholder="给你的演唱会起个名字…">
+  <div class="top-actions" id="buildActions">
+    <button id="playAllBtn" class="btn btn-primary">▶ 连播整场</button>
+    <button id="amBtn" class="btn btn-am"> Apple Music</button>
+    <button id="exportBtn" class="btn">导出</button>
+    <button id="importBtn" class="btn">导入</button>
+    <button id="resetBtn" class="btn btn-ghost">重置</button>
+  </div>
+  <div class="top-actions hidden" id="logActions">
+    <button id="newLogBtn" class="btn btn-primary">＋ 添加观演记录</button>
+    <button id="importBtn2" class="btn">导入</button>
+    <button id="exportBtn2" class="btn">导出全部</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="panel">
+    <div class="panel-head"><h2>曲库</h2><div class="group-tabs" id="groupTabs"></div></div>
+    <div class="add-ctx" id="addCtx"></div>
+    <input id="search" class="search" placeholder="搜索歌曲 / 专辑…">
+    <div id="albumList" class="album-list"></div>
+    <button id="addSongBtn" class="btn btn-ghost add-song">＋ 手动添加一首歌</button>
+  </section>
+
+  <!-- BUILD -->
+  <section class="panel" id="buildView">
+    <div class="panel-head"><h2>我的演唱会</h2><label class="dest">添加到 <select id="destSelect"></select></label></div>
+    <div class="slot-block"><div class="slot-label">INTRO</div><div id="introSlot" class="slot intro"></div></div>
+    <div id="partsWrap" class="parts-wrap"></div>
+    <button id="addPartBtn" class="btn btn-ghost" style="width:100%">＋ 添加一个 Part</button>
+    <div class="slot-block" style="margin-top:14px"><div class="slot-label">OUTRO</div><div id="outroSlot" class="slot outro"></div></div>
+    <div class="stat-bar" id="statBar"></div>
+  </section>
+
+  <!-- LOG -->
+  <section class="panel hidden" id="logView">
+    <div id="logListWrap">
+      <div class="panel-head"><h2>观演记录</h2><span id="logCount" class="part-count"></span></div>
+      <div id="logList" class="log-list"></div>
+    </div>
+    <div id="logEditor" class="hidden"></div>
+  </section>
+</main>
+
+<div class="player">
+  <div class="player-row">
+    <img id="pCover" class="pcover" alt="">
+    <div class="pinfo"><div class="pnow" id="pNow">未在播放</div><div class="psub" id="pSub">点任意歌曲的 ▶ 直接播放（官方试听片段）</div></div>
+    <div class="pctrls"><button class="pbtn" id="pPrev">⏮</button><button class="pbtn main" id="pPlay">▶</button><button class="pbtn" id="pNext">⏭</button></div>
+    <div class="pseek"><span class="ptime" id="pCur">0:00</span><input type="range" class="bar" id="pBar" min="0" max="1000" value="0"><span class="ptime" id="pDur">0:16</span></div>
+    <div class="pmeta" id="pMeta"></div>
+  </div>
+</div>
+<audio id="au"></audio>
+
+<div class="overlay" id="upOverlay"><div class="modal">
+  <h3 id="upTitle">添加本地音频</h3>
+  <p>为这首歌选一个本地音频文件，存在你自己的浏览器里、点了直接播。适合补上没有试听的歌或自定义歌。</p>
+  <input type="file" id="upFile" accept="audio/*">
+  <div class="modal-actions"><button class="btn btn-ghost" id="upClear">清除该歌音频</button><button class="btn btn-ghost" id="upCancel">取消</button></div>
+</div></div>
+
+<div class="overlay" id="amOverlay"><div class="modal">
+  <h3>导出到 Apple Music</h3>
+  <p>点每首右侧按钮在 Apple Music 打开、加进资料库；或「复制全部链接」。（静态网页无法自动建歌单，这是最直接的方式。）</p>
+  <div class="am-list" id="amList"></div>
+  <div class="modal-actions"><button class="btn" id="amCopy">复制全部链接</button><button class="btn btn-primary" id="amClose">完成</button></div>
+</div></div>
+
+<div class="overlay" id="exportOverlay"><div class="modal">
+  <h3>导出</h3>
+  <p>「歌单文本」适合分享；「存档」含全部编排与观演记录，粘到「导入」里可恢复。</p>
+  <label>歌单文本</label><textarea id="exportText" readonly></textarea>
+  <button class="btn mini" id="copyText" style="margin-top:6px">复制歌单文本</button>
+  <label style="margin-top:16px">存档（JSON）</label><textarea id="exportJson" readonly></textarea>
+  <button class="btn mini" id="copyJson" style="margin-top:6px">复制存档</button>
+  <div class="modal-actions"><button class="btn btn-primary" id="exportClose">完成</button></div>
+</div></div>
+
+<div class="overlay" id="importOverlay"><div class="modal">
+  <h3>导入</h3>
+  <p>把之前「导出」的存档 JSON 粘进来，覆盖当前数据。</p>
+  <label>存档 JSON</label><textarea id="importText" placeholder='{"concert":...}'></textarea>
+  <div class="modal-actions"><button class="btn btn-ghost" id="importCancel">取消</button><button class="btn btn-primary" id="importDo">导入</button></div>
+</div></div>
+
+<div class="overlay" id="addOverlay"><div class="modal">
+  <h3>手动添加一首歌</h3><p id="addGroupHint"></p>
+  <label>歌名</label><input type="text" id="addTitle" placeholder="歌名">
+  <p class="hint" style="margin-top:10px;color:var(--muted-2);font-size:12px">添加后可在歌曲行点 📁 上传本地音频。</p>
+  <div class="modal-actions"><button class="btn btn-ghost" id="addCancel">取消</button><button class="btn btn-primary" id="addDo">添加</button></div>
+</div></div>
+
+<script>
+"use strict";
+const COVERS=/*__COVERS__*/{}/*__END__*/;
+const PREVIEWS=/*__PREVIEWS__*/{}/*__END__*/;
+const LIBRARY=/*__LIBRARY__*/{}/*__END__*/;
+const TAGS={stage:{label:"普通舞台",emoji:"🎤",color:"#9aa0b5"},float:{label:"花车",emoji:"🚗",color:"#ffb020"},patrol:{label:"巡场",emoji:"🏃",color:"#34d399"},fansa:{label:"饭撒·小舞台",emoji:"🎪",color:"#e879f9"}};
+
+const LS={state:"cbo_state_v2",audio:"cbo_audio_v1",custom:"cbo_custom_v1",log:"cbo_log_v1"};
+const $=(s,r=document)=>r.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,9);
+const key=(g,a,t)=>`${g}|||${a}|||${t}`;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function jload(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f;}catch{return f;}}
+function jsave(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch{return false;}}
+
+let userAudio=jload(LS.audio,{});
+let custom=jload(LS.custom,[]);
+let logs=jload(LS.log,[]);
+let currentGroup="itzy";
+let mode="build";
+let editing=null;               // log record being edited (object) or null
+let concert=jload(LS.state,null)||{name:"",intro:null,parts:[{id:uid(),title:"Part 1",items:[]}],outro:null};
+const persist=()=>jsave(LS.state,concert);
+const saveLogs=()=>jsave(LS.log,logs);
+
+/* ---------- 解析 ---------- */
+function coverOf(g,al){return (COVERS[g]||{})[al]||"";}
+function audioOf(g,al,t){const k=key(g,al,t); if(userAudio[k])return userAudio[k]; return (PREVIEWS[g]||{})[`${al}|||${t}`]||"";}
+function hasAudio(g,al,t){return !!audioOf(g,al,t);}
+function amOf(g,al,t){const A=(LIBRARY[g]?.albums||[]).find(a=>a.title===al); return A?.tracks.find(x=>x.title===t)?.am||"";}
+
+function groupAlbums(gid){
+  const base=(LIBRARY[gid]?.albums||[]).map(al=>({...al,tracks:al.tracks.map(tr=>({...tr,_album:al.title}))}));
+  const mine=custom.filter(c=>c.group===gid);
+  if(mine.length){const by={}; mine.forEach(c=>{(by[c.album||"自定义"]??=[]).push(c);});
+    Object.entries(by).forEach(([al,list])=>base.push({title:al,type:"自定义",tracks:list.map(c=>({title:c.title,_album:al}))}));}
+  return base;
+}
+
+/* ---------- 曲库 ---------- */
+function renderTabs(){
+  const w=$("#groupTabs"); w.innerHTML="";
+  Object.entries(LIBRARY).forEach(([id,g])=>{const b=document.createElement("div");b.className="group-tab"+(id===currentGroup?" active":"");b.textContent=g.name;if(id===currentGroup)b.style.background=g.color;b.onclick=()=>{currentGroup=id;renderTabs();renderLib();};w.appendChild(b);});
+}
+function renderAddCtx(){
+  const el=$("#addCtx");
+  if(mode==="build"){ el.innerHTML=`点歌曲 <b>＋</b> 加入你正在编排的演唱会`; }
+  else if(editing){ el.innerHTML=`点歌曲 <b>＋</b> 加到这场记录的实际曲目单：<b>${esc(editing.tour||editing.artist||"未命名")}</b>`; }
+  else { el.innerHTML=`观演记录模式 — 新建或打开一条记录后，点歌曲 <b>＋</b> 记录当晚曲目`; }
+}
+function renderLib(){
+  const q=$("#search").value.trim().toLowerCase();
+  const list=$("#albumList"); list.innerHTML="";
+  const gc=LIBRARY[currentGroup].color;
+  groupAlbums(currentGroup).forEach(al=>{
+    const trs=al.tracks.filter(t=>!q||t.title.toLowerCase().includes(q)||al.title.toLowerCase().includes(q));
+    if(!trs.length)return;
+    const A=document.createElement("div");A.className="album"+(q?" open":"");
+    const h=document.createElement("div");h.className="album-head";
+    const cover=coverOf(currentGroup,al.title);
+    const coverHtml=cover?`<img class="album-cover" src="${cover}" alt="${esc(al.title)}" loading="lazy">`:`<div class="album-cover album-cover-fallback" style="background:linear-gradient(135deg,${gc},${gc}99)">${esc(al.title.slice(0,1))}</div>`;
+    h.innerHTML=`${coverHtml}<div class="album-meta"><div class="album-title">${esc(al.title)}</div><div class="album-sub">${al.year?al.year+" · ":""}${al.type} · ${al.tracks.length} 首</div></div><div class="album-caret">▾</div>`;
+    h.onclick=()=>A.classList.toggle("open"); A.appendChild(h);
+    const tl=document.createElement("div");tl.className="track-list";
+    trs.forEach(tr=>tl.appendChild(trackRow(tr,al))); A.appendChild(tl); list.appendChild(A);
+  });
+  if(!list.children.length)list.innerHTML=`<div class="part-empty">没有匹配的歌曲</div>`;
+  markPlaying();
+}
+function trackRow(tr,al){
+  const row=document.createElement("div");row.className="track";row.dataset.k=key(currentGroup,al.title,tr.title);
+  const on=hasAudio(currentGroup,al.title,tr.title);
+  row.innerHTML=`<div class="track-name"><div class="t">${tr.lead?'<span class="star">★</span> ':""}${esc(tr.title)}</div>${tr.title_kr?`<div class="kr">${esc(tr.title_kr)}</div>`:""}</div><span class="pill ${on?"on":"off"}">${on?"♪ 可播放":"无音源"}</span>`;
+  const play=document.createElement("button");play.className="btn mini play"+(on?" on":"");play.textContent="▶";play.disabled=!on;play.onclick=()=>playSingle(itemOf(tr,al));
+  const up=document.createElement("button");up.className="btn mini";up.textContent="📁";up.title="上传/替换本地音频";up.onclick=()=>openUpload(currentGroup,al.title,tr.title);
+  const add=document.createElement("button");add.className="btn mini";add.textContent="＋";add.title="加入";add.onclick=()=>addFromLib(tr,al);
+  row.append(play,up,add); return row;
+}
+
+/* ---------- item 通用渲染 ---------- */
+function itemOf(tr,al){return {uid:uid(),group:currentGroup,groupName:LIBRARY[currentGroup].name,album:al.title,title:tr.title,tag:"stage"};}
+function playBtnFor(it){const on=hasAudio(it.group,it.album,it.title);const b=document.createElement("button");b.className="btn mini play"+(on?" on":"");b.textContent="▶";b.disabled=!on;b.onclick=()=>playSingle(it);return b;}
+function smallBtn(t,fn){const b=document.createElement("button");b.className="btn mini";b.textContent=t;b.onclick=fn;return b;}
+function songItem(it,arr,idx,ctx){
+  const el=document.createElement("div");el.className="item";el.draggable=true;el.dataset.uid=it.uid;
+  const i=document.createElement("span");i.className="idx";i.textContent=idx+1;
+  const n=document.createElement("span");n.className="item-name";n.innerHTML=`${esc(it.title)} <span class="g">· ${esc(it.groupName)}</span>`;
+  const ts=document.createElement("select");ts.className="tag-sel";
+  Object.entries(TAGS).forEach(([k,t])=>{const o=document.createElement("option");o.value=k;o.textContent=`${t.emoji} ${t.label}`;if(k===it.tag)o.selected=true;ts.appendChild(o);});
+  ts.onchange=()=>{it.tag=ts.value;ctx.save();};
+  const mv=document.createElement("span");mv.className="move";
+  mv.append(smallBtn("▲",()=>{if(idx>0){[arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]];ctx.save();ctx.refresh();}}),
+            smallBtn("▼",()=>{if(idx<arr.length-1){[arr[idx+1],arr[idx]]=[arr[idx],arr[idx+1]];ctx.save();ctx.refresh();}}));
+  const rm=smallBtn("✕",()=>{const p=arr.findIndex(x=>x.uid===it.uid);if(p>=0)arr.splice(p,1);ctx.save();ctx.refresh();});
+  el.append(i,n,ts,mv,playBtnFor(it),rm);
+  el.addEventListener("dragstart",e=>{e.dataTransfer.setData("text/plain",it.uid);el.classList.add("dragging");});
+  el.addEventListener("dragend",()=>el.classList.remove("dragging"));
+  el.addEventListener("dragover",e=>e.preventDefault());
+  el.addEventListener("drop",e=>{e.preventDefault();const from=e.dataTransfer.getData("text/plain");const a=arr.findIndex(x=>x.uid===from),b=arr.findIndex(x=>x.uid===it.uid);if(a<0||b<0||a===b)return;const[m]=arr.splice(a,1);arr.splice(b,0,m);ctx.save();ctx.refresh();});
+  return el;
+}
+
+/* ---------- 添加分发 ---------- */
+function addFromLib(tr,al){
+  const it=itemOf(tr,al);
+  if(mode==="build"){
+    const d=$("#destSelect").value;
+    if(d==="intro")concert.intro=it; else if(d==="outro")concert.outro=it; else{const p=concert.parts.find(p=>p.id===d);if(p)p.items.push(it);}
+    persist(); renderBuilder();
+  } else if(editing){ editing.setlist.push(it); saveLogs(); renderEditor(); }
+  else { alert("先新建或打开一条观演记录，再从曲库添加当晚的歌。"); }
+}
+
+/* ---------- BUILD 视图 ---------- */
+function renderDest(){const s=$("#destSelect"),prev=s.value;s.innerHTML="";const add=(v,l)=>{const o=document.createElement("option");o.value=v;o.textContent=l;s.appendChild(o);};add("intro","Intro");concert.parts.forEach((p,i)=>add(p.id,p.title||`Part ${i+1}`));add("outro","Outro");if([...s.options].some(o=>o.value===prev))s.value=prev;else if(concert.parts.length)s.value=concert.parts.at(-1).id;}
+function slotItem(it,kind){const el=document.createElement("div");el.className="item";el.dataset.uid=it.uid;el.innerHTML=`<span class="item-name">${esc(it.title)} <span class="g">· ${esc(it.groupName)}</span></span>`;el.append(playBtnFor(it),smallBtn("✕",()=>{if(kind==="intro")concert.intro=null;else concert.outro=null;persist();renderBuilder();}));return el;}
+function renderBuilder(){
+  renderDest();
+  const iS=$("#introSlot");iS.innerHTML="";concert.intro?iS.appendChild(slotItem(concert.intro,"intro")):iS.textContent="空 — 选「添加到 Intro」后从曲库点 ＋";
+  const oS=$("#outroSlot");oS.innerHTML="";concert.outro?oS.appendChild(slotItem(concert.outro,"outro")):oS.textContent="空 — 选「添加到 Outro」后从曲库点 ＋";
+  const w=$("#partsWrap");w.innerHTML="";
+  const ctx={save:persist,refresh:renderBuilder};
+  concert.parts.forEach((p,pi)=>{
+    const box=document.createElement("div");box.className="part";
+    const h=document.createElement("div");h.className="part-head";
+    const num=document.createElement("span");num.className="part-num";num.textContent=pi+1;
+    const ti=document.createElement("input");ti.className="part-title";ti.value=p.title||`Part ${pi+1}`;ti.oninput=()=>{p.title=ti.value;persist();renderDest();};
+    const c=document.createElement("span");c.className="part-count";c.textContent=`${p.items.length} 首`;
+    const del=smallBtn("删除",()=>{if(concert.parts.length<=1){alert("至少保留一个 Part");return;}if(p.items.length&&!confirm(`删除「${p.title}」及其 ${p.items.length} 首歌？`))return;concert.parts=concert.parts.filter(x=>x.id!==p.id);persist();renderBuilder();});del.classList.add("btn-ghost");
+    h.append(num,ti,c,del);
+    const items=document.createElement("div");items.className="part-items";
+    if(!p.items.length){const e=document.createElement("div");e.className="part-empty";e.textContent="从左边曲库点 ＋ 加进来";items.appendChild(e);}
+    else p.items.forEach((it,idx)=>items.appendChild(songItem(it,p.items,idx,ctx)));
+    box.append(h,items);w.appendChild(box);
+  });
+  renderStats(); markPlaying();
+}
+function collect(withNo=false){const q=[];if(concert.intro)q.push(concert.intro);concert.parts.forEach(p=>p.items.forEach(i=>q.push(i)));if(concert.outro)q.push(concert.outro);return withNo?q:q.filter(i=>hasAudio(i.group,i.album,i.title));}
+function renderStats(){const all=collect(true),wa=all.filter(i=>hasAudio(i.group,i.album,i.title)).length;const c={stage:0,float:0,patrol:0,fansa:0};concert.parts.forEach(p=>p.items.forEach(i=>c[i.tag]=(c[i.tag]||0)+1));$("#statBar").innerHTML=`<span>总曲目 <b>${all.length}</b></span><span>可播放 <b>${wa}</b></span><span>Part <b>${concert.parts.length}</b></span>`+Object.entries(TAGS).map(([k,t])=>`<span>${t.emoji} ${t.label} <b>${c[k]||0}</b></span>`).join("");}
+
+/* ---------- LOG 视图 ---------- */
+function starStr(n){return "★★★★★".slice(0,n)+"☆☆☆☆☆".slice(0,5-n);}
+function renderLog(){
+  if(editing){renderEditor();return;}
+  $("#logListWrap").classList.remove("hidden"); $("#logEditor").classList.add("hidden");
+  const wrap=$("#logList"); wrap.innerHTML="";
+  $("#logCount").textContent=logs.length?`${logs.length} 场`:"";
+  if(!logs.length){wrap.innerHTML=`<div class="log-empty">还没有观演记录。<br>点右上「＋ 添加观演记录」，记下你看过的演唱会与当晚的歌单。</div>`;return;}
+  const sorted=[...logs].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  sorted.forEach(r=>{
+    const gid=Object.keys(LIBRARY).find(k=>LIBRARY[k].name===r.artist);
+    const color=gid?LIBRARY[gid].color:"#7a7a90";
+    const card=document.createElement("div");card.className="log-card";
+    const meta=[r.date,r.city,r.venue].filter(Boolean).join(" · ");
+    card.innerHTML=`<div class="log-stripe" style="background:${color}"></div><div class="log-body">
+      <div class="log-top"><span class="log-tour">${esc(r.tour||"未命名演唱会")}</span><span class="log-artist">${esc(r.artist||"")}</span></div>
+      <div class="log-meta">${esc(meta||"—")}</div>
+      ${r.rating?`<div class="log-stars">${starStr(r.rating)}</div>`:""}
+      <div class="log-meta">🎵 ${r.setlist?.length||0} 首${r.setlist?.length?`：${esc(r.setlist.slice(0,4).map(s=>s.title).join("、"))}${r.setlist.length>4?"…":""}`:""}</div>
+      ${r.notes?`<div class="log-notes">${esc(r.notes)}</div>`:""}
+      <div class="log-actions"></div></div>`;
+    const acts=card.querySelector(".log-actions");
+    const playable=(r.setlist||[]).filter(s=>hasAudio(s.group,s.album,s.title));
+    const pb=smallBtn("▶ 播放这场",()=>{if(!playable.length){alert("这场的曲目没有可播放的片段。");return;}startQueue(playable,0);});pb.className="btn mini play on";
+    acts.append(pb, smallBtn("编辑",()=>openEditor(r.id)), smallBtn("导出到 Apple Music",()=>openAM(r.setlist||[])),
+      (()=>{const d=smallBtn("删除",()=>{if(confirm("删除这条观演记录？")){logs=logs.filter(x=>x.id!==r.id);saveLogs();renderLog();}});d.classList.add("btn-ghost");return d;})());
+    wrap.appendChild(card);
+  });
+}
+function openEditor(id){editing = id?logs.find(r=>r.id===id):{id:uid(),artist:LIBRARY[currentGroup].name,tour:"",date:"",city:"",venue:"",rating:0,notes:"",setlist:[],_new:!id};
+  if(!id){/* new: not yet in logs */} renderAddCtx(); renderEditor();}
+function renderEditor(){
+  $("#logListWrap").classList.add("hidden"); const box=$("#logEditor"); box.classList.remove("hidden"); box.innerHTML="";
+  const r=editing;
+  const head=document.createElement("div");head.className="panel-head";
+  head.innerHTML=`<h2>${r._new?"新观演记录":"编辑观演记录"}</h2>`;
+  const back=smallBtn("← 返回列表",()=>{editing=null;renderAddCtx();renderLog();});back.className="btn";head.appendChild(back);
+  box.appendChild(head);
+  const grid=document.createElement("div");grid.className="form-grid";
+  const groupOpts=Object.values(LIBRARY).map(g=>`<option${g.name===r.artist?" selected":""}>${esc(g.name)}</option>`).join("")+`<option${!Object.values(LIBRARY).some(g=>g.name===r.artist)?" selected":""}>其他</option>`;
+  grid.innerHTML=`
+    <div><label class="flabel">团 / 艺人</label><select class="fld" id="f_artist">${groupOpts}</select></div>
+    <div><label class="flabel">巡演 / 演唱会名</label><input class="fld" id="f_tour" value="${esc(r.tour||"")}" placeholder="如 BORN TO BE World Tour"></div>
+    <div><label class="flabel">日期</label><input class="fld" type="date" id="f_date" value="${esc(r.date||"")}"></div>
+    <div><label class="flabel">城市</label><input class="fld" id="f_city" value="${esc(r.city||"")}" placeholder="如 上海"></div>
+    <div><label class="flabel">场馆</label><input class="fld" id="f_venue" value="${esc(r.venue||"")}" placeholder="如 梅赛德斯奔驰文化中心"></div>
+    <div><label class="flabel">评分</label><div class="stars-input" id="f_stars"></div></div>
+    <div class="full"><label class="flabel">感想</label><textarea class="fld" id="f_notes" placeholder="那晚的感受、名场面、solo、ment…">${esc(r.notes||"")}</textarea></div>`;
+  box.appendChild(grid);
+  // stars
+  const sc=grid.querySelector("#f_stars");
+  const drawStars=()=>{sc.innerHTML="";for(let i=1;i<=5;i++){const s=document.createElement("span");s.textContent="★";if(i<=(r.rating||0))s.className="on";s.onclick=()=>{r.rating=(r.rating===i?0:i);drawStars();};sc.appendChild(s);}};
+  drawStars();
+  // bind fields
+  const bind=(id,k)=>{grid.querySelector(id).addEventListener("input",e=>{r[k]=e.target.value; if(id==="#f_tour"||id==="#f_artist")renderAddCtx();});};
+  bind("#f_artist","artist");bind("#f_tour","tour");bind("#f_date","date");bind("#f_city","city");bind("#f_venue","venue");bind("#f_notes","notes");
+  // setlist
+  const sl=document.createElement("div");sl.className="slot-block";
+  sl.innerHTML=`<div class="slot-label">当晚曲目单（从左侧曲库点 ＋ 添加）</div>`;
+  const items=document.createElement("div");items.className="part-items";items.style.border="1px solid var(--line)";items.style.borderRadius="12px";
+  const ctx={save:saveLogs,refresh:renderEditor};
+  if(!r.setlist.length){const e=document.createElement("div");e.className="part-empty";e.textContent="还没记曲目 — 从左边曲库点 ＋ 加进来";items.appendChild(e);}
+  else r.setlist.forEach((it,idx)=>items.appendChild(songItem(it,r.setlist,idx,ctx)));
+  sl.appendChild(items);box.appendChild(sl);
+  // actions
+  const acts=document.createElement("div");acts.className="modal-actions";acts.style.justifyContent="space-between";
+  const delBtn=smallBtn("删除这条",()=>{if(r._new){editing=null;renderLog();return;}if(confirm("删除这条观演记录？")){logs=logs.filter(x=>x.id!==r.id);saveLogs();editing=null;renderLog();}});delBtn.classList.add("btn-ghost");
+  const right=document.createElement("div");right.style.display="flex";right.style.gap="9px";
+  const amb=smallBtn("导出到 Apple Music",()=>openAM(r.setlist));amb.className="btn btn-am";
+  const save=smallBtn("保存",()=>{if(r._new){delete r._new;logs.push(r);}saveLogs();editing=null;renderAddCtx();renderLog();});save.className="btn btn-primary";
+  right.append(amb,save);acts.append(delBtn,right);box.appendChild(acts);
+}
+
+/* ---------- 播放器 ---------- */
+const au=$("#au"); let queue=[],qi=0,curKey=null;
+function fmt(s){s=Math.max(0,s|0);return `${s/60|0}:${String(s%60).padStart(2,"0")}`;}
+function playSingle(it){startQueue([it],0);}
+function playAll(){const q=collect(false);if(!q.length){alert("还没有可播放的歌。");return;}startQueue(q,0);}
+function startQueue(items,idx){queue=items;qi=idx;playCur();}
+function playCur(){const it=queue[qi];if(!it)return;const src=audioOf(it.group,it.album,it.title);if(!src){nextTrack();return;}curKey=key(it.group,it.album,it.title);au.src=src;au.play().catch(()=>{});$("#pNow").textContent=it.title;$("#pSub").textContent=(it.groupName||it.group)+" · "+it.album;$("#pMeta").textContent=queue.length>1?`${qi+1}/${queue.length}`:"";const cv=coverOf(it.group,it.album),c=$("#pCover");if(cv){c.src=cv;c.style.visibility="visible";}else c.style.visibility="hidden";markPlaying();}
+function nextTrack(){if(qi<queue.length-1){qi++;playCur();}else setPlayIcon(false);}
+function prevTrack(){if(qi>0){qi--;playCur();}else au.currentTime=0;}
+function setPlayIcon(p){$("#pPlay").textContent=p?"⏸":"▶";}
+function markPlaying(){document.querySelectorAll(".track.playing,.item.playing").forEach(e=>e.classList.remove("playing"));if(!curKey||au.paused)return;document.querySelectorAll(`.track[data-k="${CSS.escape(curKey)}"]`).forEach(e=>e.classList.add("playing"));const it=queue[qi];if(it)document.querySelectorAll(`.item[data-uid="${it.uid}"]`).forEach(e=>e.classList.add("playing"));}
+au.addEventListener("play",()=>{setPlayIcon(true);markPlaying();});
+au.addEventListener("pause",()=>{setPlayIcon(false);markPlaying();});
+au.addEventListener("ended",nextTrack);
+au.addEventListener("timeupdate",()=>{$("#pCur").textContent=fmt(au.currentTime);if(au.duration)$("#pBar").value=String(au.currentTime/au.duration*1000|0);});
+au.addEventListener("loadedmetadata",()=>{$("#pDur").textContent=fmt(au.duration||16);});
+
+/* ---------- Apple Music 导出 ---------- */
+let amLinks=[];
+function openAM(items){
+  const list=$("#amList");list.innerHTML="";amLinks=[];
+  if(!items||!items.length){list.innerHTML=`<div class="am-row"><span class="miss">没有曲目</span></div>`;}
+  items.forEach(it=>{
+    const url=amOf(it.group,it.album,it.title);
+    const row=document.createElement("div");row.className="am-row";
+    row.innerHTML=`<span class="n">${esc(it.title)} <span style="color:var(--muted-2)">· ${esc(it.groupName)}</span></span>`;
+    if(url){amLinks.push(url);const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";a.textContent="在 Apple Music 打开";row.appendChild(a);}
+    else{const s=document.createElement("span");s.className="miss";s.textContent="无链接";row.appendChild(s);}
+    list.appendChild(row);
+  });
+  show("#amOverlay");
+}
+
+/* ---------- 上传本地音频 ---------- */
+let upCtx=null;
+function openUpload(g,al,t){upCtx={g,al,t};$("#upTitle").textContent=`音频：${t}`;$("#upFile").value="";show("#upOverlay");}
+
+/* ---------- modal & 导出导入 ---------- */
+function show(s){$(s).classList.add("show");} function hide(s){$(s).classList.remove("show");}
+function buildSetlistText(){const L=[];L.push(`🎤 ${concert.name||"My Concert"}`);L.push("═".repeat(24));if(concert.intro)L.push(`[INTRO] ${concert.intro.title} — ${concert.intro.groupName}`);concert.parts.forEach((p,i)=>{L.push("");L.push(`▸ ${p.title||"Part "+(i+1)}`);p.items.forEach((it,j)=>{const t=TAGS[it.tag];L.push(`   ${j+1}. ${it.title} — ${it.groupName}  ${t.emoji}${t.label}`);});});if(concert.outro){L.push("");L.push(`[OUTRO] ${concert.outro.title} — ${concert.outro.groupName}`);}return L.join("\n");}
+function doExport(){$("#exportText").value=buildSetlistText();$("#exportJson").value=JSON.stringify({concert,custom,logs});show("#exportOverlay");}
+function copyFrom(sel){const el=$(sel);el.select();try{document.execCommand("copy");}catch{}try{navigator.clipboard?.writeText(el.value);}catch{}}
+function doImport(){try{const d=JSON.parse($("#importText").value);if(d.concert)concert=d.concert;if(d.custom){custom=d.custom;jsave(LS.custom,custom);}if(d.logs){logs=d.logs;saveLogs();}persist();$("#concertName").value=concert.name||"";renderTabs();renderLib();renderBuilder();renderLog();hide("#importOverlay");}catch{alert("解析失败，请确认是本工具导出的存档 JSON");}}
+
+/* ---------- 模式切换 ---------- */
+function setMode(m){
+  mode=m; editing=null;
+  document.querySelectorAll(".mode-tab").forEach(b=>b.classList.toggle("active",b.dataset.mode===m));
+  const build=m==="build";
+  $("#buildView").classList.toggle("hidden",!build);
+  $("#logView").classList.toggle("hidden",build);
+  $("#buildActions").classList.toggle("hidden",!build);
+  $("#logActions").classList.toggle("hidden",build);
+  $("#concertName").classList.toggle("hidden",!build);
+  renderAddCtx();
+  if(build)renderBuilder(); else renderLog();
+}
+
+/* ---------- init ---------- */
+function init(){
+  $("#concertName").value=concert.name||"";
+  $("#concertName").oninput=e=>{concert.name=e.target.value;persist();};
+  $("#playAllBtn").onclick=playAll;
+  $("#amBtn").onclick=()=>openAM(collect(true));
+  $("#exportBtn").onclick=doExport; $("#exportBtn2").onclick=doExport;
+  $("#importBtn").onclick=()=>{$("#importText").value="";show("#importOverlay");};
+  $("#importBtn2").onclick=()=>{$("#importText").value="";show("#importOverlay");};
+  $("#resetBtn").onclick=()=>{if(!confirm("清空当前编排？（曲库、上传音频、观演记录都会保留）"))return;concert={name:"",intro:null,parts:[{id:uid(),title:"Part 1",items:[]}],outro:null};persist();$("#concertName").value="";renderBuilder();};
+  $("#addPartBtn").onclick=()=>{concert.parts.push({id:uid(),title:`Part ${concert.parts.length+1}`,items:[]});persist();renderBuilder();};
+  $("#newLogBtn").onclick=()=>{openEditor(null);};
+  $("#search").oninput=renderLib;
+  $("#addSongBtn").onclick=()=>{$("#addGroupHint").textContent=`添加到 ${LIBRARY[currentGroup].name}（归入「自定义」专辑）`;$("#addTitle").value="";show("#addOverlay");};
+  $("#pPlay").onclick=()=>{if(!au.src)return playAll();if(au.paused)au.play();else au.pause();};
+  $("#pPrev").onclick=prevTrack; $("#pNext").onclick=nextTrack;
+  $("#pBar").oninput=()=>{if(au.duration)au.currentTime=au.duration*($("#pBar").value/1000);};
+  $("#upFile").addEventListener("change",e=>{const f=e.target.files[0];if(!f||!upCtx)return;const r=new FileReader();r.onload=()=>{const k=key(upCtx.g,upCtx.al,upCtx.t);userAudio[k]=r.result;if(!jsave(LS.audio,userAudio)){delete userAudio[k];alert("浏览器本地存储空间不足（试试更小的文件）。");}hide("#upOverlay");renderLib();if(mode==="build")renderBuilder();else renderLog();};r.readAsDataURL(f);});
+  $("#upClear").onclick=()=>{if(upCtx){delete userAudio[key(upCtx.g,upCtx.al,upCtx.t)];jsave(LS.audio,userAudio);}hide("#upOverlay");renderLib();};
+  $("#upCancel").onclick=()=>hide("#upOverlay");
+  $("#amClose").onclick=()=>hide("#amOverlay");
+  $("#amCopy").onclick=()=>{if(!amLinks.length){alert("没有可复制的链接");return;}const t=amLinks.join("\n");try{navigator.clipboard?.writeText(t);}catch{}const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");}catch{}ta.remove();$("#amCopy").textContent="已复制 ✓";setTimeout(()=>$("#amCopy").textContent="复制全部链接",1500);};
+  $("#exportClose").onclick=()=>hide("#exportOverlay");
+  $("#copyText").onclick=()=>copyFrom("#exportText"); $("#copyJson").onclick=()=>copyFrom("#exportJson");
+  $("#importCancel").onclick=()=>hide("#importOverlay"); $("#importDo").onclick=doImport;
+  $("#addCancel").onclick=()=>hide("#addOverlay");
+  $("#addDo").onclick=()=>{const t=$("#addTitle").value.trim();if(!t)return;custom.push({group:currentGroup,album:"自定义",title:t});jsave(LS.custom,custom);hide("#addOverlay");renderLib();};
+  document.querySelectorAll(".mode-tab").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+  document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("show");}));
+  setPlayIcon(false); renderTabs(); renderLib(); renderBuilder(); renderAddCtx();
+}
+document.addEventListener("DOMContentLoaded",init);
+</script>
