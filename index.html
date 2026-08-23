@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Concert Builder</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🎤 <span>My Concert Builder</span></div>
+    <input id="concertName" class="concert-name" placeholder="给你的演唱会起个名字…" />
+    <div class="top-actions">
+      <button id="playAllBtn" class="btn btn-primary">▶ 连播整场</button>
+      <button id="exportBtn" class="btn">导出</button>
+      <button id="importBtn" class="btn">导入</button>
+      <input type="file" id="importFile" accept="application/json" hidden />
+      <button id="resetBtn" class="btn btn-ghost">重置</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 左：曲库 -->
+    <section class="panel library">
+      <div class="panel-head">
+        <h2>曲库</h2>
+        <div class="group-tabs" id="groupTabs"></div>
+      </div>
+      <input id="search" class="search" placeholder="搜索歌曲 / 专辑…" />
+      <div id="albumList" class="album-list"></div>
+      <button id="addSongBtn" class="btn btn-ghost add-song">＋ 手动添加一首歌</button>
+    </section>
+
+    <!-- 右：编排 -->
+    <section class="panel builder">
+      <div class="panel-head">
+        <h2>我的演唱会</h2>
+        <label class="dest">
+          添加到：
+          <select id="destSelect"></select>
+        </label>
+      </div>
+
+      <div class="slot-block">
+        <div class="slot-label">INTRO</div>
+        <div id="introSlot" class="slot"></div>
+      </div>
+
+      <div id="partsWrap" class="parts-wrap"></div>
+      <button id="addPartBtn" class="btn btn-ghost">＋ 添加一个 Part</button>
+
+      <div class="slot-block">
+        <div class="slot-label">OUTRO</div>
+        <div id="outroSlot" class="slot"></div>
+      </div>
+
+      <div class="stat-bar" id="statBar"></div>
+    </section>
+  </main>
+
+  <!-- 底部播放条 -->
+  <div class="player-bar" id="playerBar">
+    <div class="pb-info">
+      <div class="pb-now" id="pbNow">未在播放</div>
+      <div class="pb-sub" id="pbSub">从曲库点 ▶ 试听，或点「连播整场」</div>
+    </div>
+    <div class="pb-controls">
+      <button id="pbPrev" class="btn btn-ghost" title="上一首">⏮</button>
+      <button id="pbToggle" class="btn">⏸</button>
+      <button id="pbNext" class="btn btn-ghost" title="下一首">⏭</button>
+      <button id="pbClose" class="btn btn-ghost" title="收起">✕</button>
+    </div>
+    <div class="pb-video" id="pbVideo"><div id="ytplayer"></div></div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
