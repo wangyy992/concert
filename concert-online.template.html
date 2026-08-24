@@ -202,6 +202,62 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 .track-name .t{transition:color .15s;}
 .track:hover .track-name .t{color:#fff;}
 
+/* ============ 玻璃拟态主题 ============ */
+:root{
+  --text:#ffffff; --muted:rgba(255,255,255,.74); --muted-2:rgba(255,255,255,.52);
+  --line:rgba(255,255,255,.16); --line-soft:rgba(255,255,255,.10);
+}
+body{
+  background:#140f26;
+  background-image:
+    radial-gradient(38% 30% at 16% 10%, rgba(255,92,168,.55), transparent 60%),
+    radial-gradient(42% 34% at 86% 14%, rgba(91,134,255,.52), transparent 62%),
+    radial-gradient(48% 42% at 64% 96%, rgba(155,92,255,.5), transparent 60%),
+    radial-gradient(40% 32% at 6% 84%, rgba(34,211,238,.4), transparent 60%);
+  background-attachment:fixed;
+}
+.topbar{background:rgba(20,16,40,.5); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); border-bottom:1px solid var(--line);}
+.panel{background:rgba(22,19,44,.5)!important; -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); border:1px solid var(--line); box-shadow:0 10px 40px rgba(0,0,0,.25);}
+.album{background:rgba(255,255,255,.06); border:1px solid var(--line-soft);}
+.album-head:hover{background:rgba(255,255,255,.10);}
+.album.open{border-color:rgba(255,255,255,.3);}
+.album-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.22);}
+.track{border-bottom:1px solid rgba(255,255,255,.07);}
+.track:hover{background:rgba(255,255,255,.06);}
+.track.playing{background:rgba(255,61,127,.2);}
+.pill.on{color:#5df0b3; background:rgba(52,211,153,.2); border:1px solid rgba(52,211,153,.45);}
+.pill.off{color:rgba(255,255,255,.5); border:1px solid var(--line);}
+.add-ctx{background:rgba(255,255,255,.07); border:1px solid var(--line-soft);}
+.item{background:rgba(255,255,255,.08); border:1px solid var(--line);}
+.item.playing{border-color:#fff; box-shadow:0 0 0 1px #fff inset;}
+.slot{border:1px dashed rgba(255,255,255,.28);}
+.slot.intro{border-color:rgba(255,138,180,.6);} .slot.outro{border-color:rgba(140,170,255,.6);}
+.part{background:rgba(255,255,255,.05); border:1px solid var(--line);}
+.part-head{background:rgba(255,255,255,.08); border-bottom:1px solid var(--line);}
+.stat-bar{border-top:1px solid var(--line);}
+.btn{background:rgba(255,255,255,.12); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); border:1px solid var(--line); color:#fff;}
+.btn:hover{background:rgba(255,255,255,.2); border-color:rgba(255,255,255,.4);}
+.btn-primary{background:linear-gradient(120deg,var(--itzy),#ff6aa0); border:none; box-shadow:0 6px 20px rgba(255,61,127,.4);}
+.btn-primary:hover{filter:brightness(1.07);}
+.btn-ghost{background:rgba(255,255,255,.05);}
+.btn.add-btn{color:#fff; background:rgba(255,61,127,.3); border-color:rgba(255,255,255,.3);}
+.btn.add-btn:hover{background:rgba(255,61,127,.5);}
+.btn.mini.play.on{color:#5df0b3; border-color:rgba(93,240,179,.5); background:rgba(52,211,153,.14);}
+.search,.concert-name,.dest select,.tag-sel,.fld,.artist-search input,.modal input,.modal textarea,.ex-ta{background:rgba(255,255,255,.12)!important; border:1px solid var(--line); color:#fff;}
+input::placeholder,textarea::placeholder{color:rgba(255,255,255,.5);}
+.group-tab{background:rgba(255,255,255,.1); border:1px solid var(--line); color:rgba(255,255,255,.82);}
+.mode-tabs{background:rgba(255,255,255,.1); border:1px solid var(--line);}
+.player{background:rgba(20,16,40,.55); -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); border-top:1px solid var(--line);}
+.pbtn{background:rgba(255,255,255,.14); border:1px solid var(--line);}
+.pbtn:hover{border-color:rgba(255,255,255,.4);}
+.pcover,.album-cover{box-shadow:0 4px 16px rgba(0,0,0,.35);}
+.overlay{background:rgba(8,6,20,.55);}
+.modal{background:rgba(28,23,52,.82)!important; -webkit-backdrop-filter:blur(30px); backdrop-filter:blur(30px); border:1px solid rgba(255,255,255,.28);}
+.am-row{background:rgba(255,255,255,.08); border:1px solid var(--line);}
+.log-card{background:rgba(255,255,255,.06); border:1px solid var(--line);}
+.log-empty{color:var(--muted);}
+.sheet-handle{background:rgba(30,25,56,.7)!important; border-bottom:1px solid var(--line);}
+
 .hidden{display:none!important;}
 .sheet-handle{display:none;}
 
