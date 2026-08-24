@@ -836,14 +836,22 @@ async function searchArtist(name){
     const artist=(a.results||[]).find(x=>x.artistName&&x.artistName.toLowerCase()===name.toLowerCase())||(a.results||[])[0];
     if(!artist){alert("没找到这个歌手，换个写法或用英文名试试。");return;}
     const gid="live_"+artist.artistId;
-    const sr=await itunesJSONP(`https://itunes.apple.com/lookup?id=${artist.artistId}&entity=song&limit=200`);
-    const songs=(sr.results||[]).filter(x=>x.wrapperType==="track"&&x.kind==="song"&&x.previewUrl);
-    if(!songs.length){alert("这个歌手在 Apple 库里没有可用的试听曲目。");return;}
-    buildLiveGroup(gid, artist.artistName, songs, "#7c5cff", false);
+    await loadArtistFull(gid, artist.artistId, artist.artistName, "#7c5cff", false);
+    if(!LIBRARY[gid]||!LIBRARY[gid].albums.length){alert("这个歌手在 Apple 库里没有可用曲目。");return;}
     currentGroup=gid; $("#search").value=""; renderTabs(); renderLib();
   }catch(e){
     alert("在线搜索需要联网，请在网站 https://wangyy992.github.io/concert/ 上使用（claude.ai 预览沙箱不联网）。");
   }finally{ btn.textContent=old; btn.disabled=false; }
+}
+/* 按专辑逐张拉完整曲目（含成员 solo 等署名不同的歌），并行请求后合并 */
+async function loadArtistFull(gid, artistId, name, color, isDefault){
+  const albRes=await itunesJSONP(`https://itunes.apple.com/lookup?id=${artistId}&entity=album&limit=200`);
+  const albums=(albRes.results||[]).filter(x=>x.collectionType==="Album"&&!LIVE_BAD.test(x.collectionName||""));
+  const byName={};
+  albums.forEach(a=>{const k=cleanAlbum(a.collectionName).toLowerCase();const sc=(/[\(\[]/.test(a.collectionName)?0:1000)+(a.trackCount||0);if(!byName[k]||sc>byName[k]._s)byName[k]=Object.assign({_s:sc},a);});
+  const chosen=Object.values(byName);
+  const lists=await Promise.all(chosen.map(a=>itunesJSONP(`https://itunes.apple.com/lookup?id=${a.collectionId}&entity=song&limit=60`).then(r=>(r.results||[]).filter(x=>x.wrapperType==="track")).catch(()=>[])));
+  buildLiveGroup(gid, name, lists.flat(), color, isDefault);
 }
 function buildLiveGroup(gid,name,songs,color,isDefault){
   const albums={};
@@ -861,7 +869,7 @@ function buildLiveGroup(gid,name,songs,color,isDefault){
     const nAl=al.toLowerCase().replace(/[^a-z0-9]/g,""), seen=new Set(), tracks=[];
     info.tracks.forEach(s=>{
       const nt=s.trackName.toLowerCase().replace(/[^a-z0-9]/g,""); if(!nt||seen.has(nt))return; seen.add(nt);
-      PREVIEWS[gid][`${al}|||${s.trackName}`]=s.previewUrl;
+      if(s.previewUrl)PREVIEWS[gid][`${al}|||${s.trackName}`]=s.previewUrl;
       tracks.push({title:s.trackName, lead:nt===nAl, am:(s.trackViewUrl||"").replace(/[?&]uo=4/,"")});
     });
     if(!tracks.length)return;
