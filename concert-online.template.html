@@ -181,9 +181,28 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 .poster-img{width:100%; border-radius:11px; border:1px solid var(--line); display:block; background:var(--panel-2);}
 .ex-ta{width:100%; min-height:104px; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:10px 12px; font-size:12px; font-family:ui-monospace,monospace; resize:vertical; margin-top:8px;}
 .hidden{display:none!important;}
+.sheet-handle{display:none;}
 
 /* ---- 移动端 ---- */
 @media(max-width:640px){
+  /* 右侧面板变成底部抽屉 */
+  #buildView, #logView{
+    position:fixed; left:0; right:0; bottom:64px; z-index:35;
+    max-height:82vh; overflow-y:auto; margin:0; border:1px solid var(--line);
+    border-radius:18px 18px 0 0; box-shadow:0 -12px 40px rgba(0,0,0,.5);
+    transform:translateY(calc(100% - 54px)); transition:transform .28s cubic-bezier(.4,0,.2,1);
+  }
+  body.sheet-open #buildView, body.sheet-open #logView{transform:translateY(0);}
+  .sheet-handle{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    height:54px; padding:0 18px; position:sticky; top:0; z-index:2;
+    background:var(--panel-3); cursor:pointer; border-bottom:1px solid var(--line);
+    font-family:var(--disp); font-weight:800; font-size:15px;
+  }
+  .sheet-handle .sh-chev{color:var(--muted); transition:transform .28s;}
+  body.sheet-open .sheet-handle .sh-chev{transform:rotate(180deg);}
+  body{padding-bottom:128px;}
+  .album-list{max-height:none;}
   .topbar{padding:10px 13px; gap:9px;}
   .brand{font-size:17px;}
   .mode-tabs{order:2;}
@@ -248,6 +267,7 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 
   <!-- BUILD -->
   <section class="panel" id="buildView">
+    <div class="sheet-handle" id="buildHandle"><span class="sh-label">我的演唱会</span><span class="sh-chev">▲</span></div>
     <div class="panel-head"><h2>我的演唱会</h2><label class="dest">添加到 <select id="destSelect"></select></label></div>
     <div class="slot-block"><div class="slot-label">INTRO</div><div id="introSlot" class="slot intro"></div></div>
     <div id="partsWrap" class="parts-wrap"></div>
@@ -258,6 +278,7 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 
   <!-- LOG -->
   <section class="panel hidden" id="logView">
+    <div class="sheet-handle" id="logHandle"><span class="sh-label">观演记录</span><span class="sh-chev">▲</span></div>
     <div id="logListWrap">
       <div class="panel-head"><h2>观演记录</h2><span id="logCount" class="part-count"></span></div>
       <div id="logList" class="log-list"></div>
@@ -427,6 +448,7 @@ function removeLiveGroup(id){
   if(currentGroup===id)currentGroup=Object.keys(LIBRARY)[0];
   renderTabs(); renderLib();
 }
+function setSheetLabel(id,txt){const h=$("#"+id);if(h){const l=$(".sh-label",h);if(l)l.textContent=txt;}}
 function renderAddCtx(){
   const el=$("#addCtx");
   if(mode==="build"){ el.innerHTML=`点歌曲 <b>＋</b> 加入你正在编排的演唱会`; }
@@ -531,7 +553,7 @@ function renderBuilder(){
     else p.items.forEach((it,idx)=>items.appendChild(songItem(it,p.items,idx,ctx)));
     box.append(h,items);w.appendChild(box);
   });
-  renderStats(); markPlaying();
+  renderStats(); markPlaying(); setSheetLabel("buildHandle",`我的演唱会 · ${collect(true).length} 首`);
 }
 function collect(withNo=false){const q=[];if(concert.intro)q.push(concert.intro);concert.parts.forEach(p=>p.items.forEach(i=>q.push(i)));if(concert.outro)q.push(concert.outro);return withNo?q:q.filter(hasItemAudio);}
 function renderStats(){const all=collect(true),wa=all.filter(hasItemAudio).length;const st={big:0,small:0},sg={patrol:0,float:0,fansa:0};concert.parts.forEach(p=>p.items.forEach(i=>{st[i.stage||"big"]=(st[i.stage||"big"]||0)+1;if(i.seg&&i.seg!=="none")sg[i.seg]=(sg[i.seg]||0)+1;}));$("#statBar").innerHTML=`<span>总曲目 <b>${all.length}</b></span><span>可播放 <b>${wa}</b></span><span>Part <b>${concert.parts.length}</b></span><span>大舞台 <b>${st.big}</b></span><span>小舞台 <b>${st.small}</b></span>`+Object.entries(SEGS).filter(([k])=>k!=="none").map(([k,t])=>`<span>${t.label} <b>${sg[k]||0}</b></span>`).join("");}
@@ -543,6 +565,7 @@ function renderLog(){
   $("#logListWrap").classList.remove("hidden"); $("#logEditor").classList.add("hidden");
   const wrap=$("#logList"); wrap.innerHTML="";
   $("#logCount").textContent=logs.length?`${logs.length} 场`:"";
+  setSheetLabel("logHandle",`观演记录 · ${logs.length} 场`);
   if(!logs.length){wrap.innerHTML=`<div class="log-empty">还没有观演记录。<br>点右上「＋ 添加观演记录」，记下你看过的演唱会与当晚的歌单。</div>`;return;}
   const sorted=[...logs].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   sorted.forEach(r=>{
@@ -570,6 +593,7 @@ function openEditor(id){editing = id?logs.find(r=>r.id===id):{id:uid(),artist:LI
 function renderEditor(){
   $("#logListWrap").classList.add("hidden"); const box=$("#logEditor"); box.classList.remove("hidden"); box.innerHTML="";
   const r=editing;
+  setSheetLabel("logHandle",`这场记录 · ${recordItems(r).length} 首`);
   const head=document.createElement("div");head.className="panel-head";
   head.innerHTML=`<h2>${r._new?"新观演记录":"编辑观演记录"}</h2>`;
   const back=smallBtn("← 返回列表",()=>{editing=null;renderAddCtx();renderLog();});back.className="btn";head.appendChild(back);
@@ -866,7 +890,7 @@ async function refreshDefaults(){
 
 /* ---------- 模式切换 ---------- */
 function setMode(m){
-  mode=m; editing=null;
+  mode=m; editing=null; document.body.classList.remove("sheet-open");
   document.querySelectorAll(".mode-tab").forEach(b=>b.classList.toggle("active",b.dataset.mode===m));
   const build=m==="build";
   $("#buildView").classList.toggle("hidden",!build);
@@ -893,6 +917,8 @@ function init(){
   $("#addPartBtn").onclick=()=>{concert.parts.push({id:uid(),title:`Part ${concert.parts.length+1}`,items:[]});persist();renderBuilder();};
   $("#newLogBtn").onclick=()=>{openEditor(null);};
   $("#search").oninput=renderLib;
+  $("#buildHandle").onclick=()=>document.body.classList.toggle("sheet-open");
+  $("#logHandle").onclick=()=>document.body.classList.toggle("sheet-open");
   $("#artistGo").onclick=()=>searchArtist($("#artistInput").value);
   $("#artistInput").addEventListener("keydown",e=>{if(e.key==="Enter")searchArtist($("#artistInput").value);});
   $("#addSongBtn").onclick=()=>{if(!LIBRARY[currentGroup]){alert("曲库还在加载，请稍候。");return;}$("#addGroupHint").textContent=`添加到 ${LIBRARY[currentGroup].name}（归入「自定义」专辑）`;$("#addTitle").value="";show("#addOverlay");};
