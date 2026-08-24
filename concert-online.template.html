@@ -765,9 +765,10 @@ function renderEditor(){
   const back=smallBtn("← 返回列表",()=>{editing=null;renderAddCtx();renderLog();});back.className="btn";head.appendChild(back);
   box.appendChild(head);
   const grid=document.createElement("div");grid.className="form-grid";
-  const groupOpts=Object.values(LIBRARY).map(g=>`<option${g.name===r.artist?" selected":""}>${esc(g.name)}</option>`).join("")+`<option${!Object.values(LIBRARY).some(g=>g.name===r.artist)?" selected":""}>其他</option>`;
+  // 团/艺人：自由输入；已加载的歌手作为输入建议
+  const groupOpts=Object.values(LIBRARY).map(g=>`<option value="${esc(g.name)}"></option>`).join("");
   grid.innerHTML=`
-    <div><label class="flabel">团 / 艺人</label><select class="fld" id="f_artist">${groupOpts}</select></div>
+    <div><label class="flabel">团 / 艺人</label><input class="fld" id="f_artist" list="artistOpts" value="${esc(r.artist||"")}" autocomplete="off"><datalist id="artistOpts">${groupOpts}</datalist></div>
     <div><label class="flabel">巡演 / 演唱会名</label><input class="fld" id="f_tour" value="${esc(r.tour||"")}" placeholder="如 BORN TO BE World Tour"></div>
     <div><label class="flabel">日期</label><input class="fld" type="date" id="f_date" value="${esc(r.date||"")}"></div>
     <div><label class="flabel">城市</label><input class="fld" id="f_city" value="${esc(r.city||"")}" ></div>
