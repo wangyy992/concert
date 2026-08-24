@@ -114,7 +114,8 @@ button,input,select,textarea{font-family:inherit;}
 .item-name .g{color:var(--muted-2); font-size:11px; font-weight:400;}
 .move{display:flex; flex-direction:column; gap:1px;} .move button{line-height:1; padding:1px 5px; font-size:9px; border-radius:5px;}
 .slot .item{flex:1;}
-.tags{display:flex; gap:5px; flex:none;}
+.tags{display:flex; gap:5px; flex:none; flex-wrap:wrap;}
+.sec-sel{border-color:rgba(255,61,127,.5)!important;}
 .tags .tag-sel{padding:5px 7px; font-size:12px;}
 .stat-bar{margin-top:16px; padding-top:14px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; display:flex; gap:8px 16px; flex-wrap:wrap; align-items:center;}
 .stat-bar b{color:var(--text); font-variant-numeric:tabular-nums;}
@@ -401,7 +402,7 @@ input::placeholder,textarea::placeholder{color:rgba(255,255,255,.5);}
   </div>
   <div class="ex-sec" id="exMusic">
     <div class="ex-h">送进音乐 App（自动建歌单）</div>
-    <p style="color:var(--muted);font-size:12.5px;margin:0 0 9px">按钮会先复制歌单、再打开搬歌工具；到那边选「文本 / Text」粘贴 → 登录 Apple Music 或 Spotify → 自动建好整张歌单。（这两个搬歌工具暂不支持往网易云建歌单）</p>
+    <p style="color:var(--muted);font-size:12.5px;margin:0 0 9px">按钮会先复制歌单、再打开搬歌工具；到那边选「文本 / Text」粘贴 → 登录 Apple Music 或 Spotify → 自动建好整张歌单。</p>
     <div style="display:flex;gap:9px;flex-wrap:wrap">
       <button class="btn btn-am" id="toTMM">复制并打开 TuneMyMusic</button>
       <button class="btn" id="toSDZ">复制并打开 Soundiiz</button>
@@ -576,12 +577,16 @@ function itemOf(tr,al){
 }
 function playBtnFor(it){const on=hasItemAudio(it);const b=document.createElement("button");b.className="btn mini play"+(on?" on":"");b.textContent="▶";b.disabled=!on;b.onclick=()=>playSingle(it);return b;}
 function smallBtn(t,fn){const b=document.createElement("button");b.className="btn mini";b.textContent=t;b.onclick=fn;return b;}
-function songItem(it,arr,idx,ctx){
+function sectionDests(stage){const d=[["intro","Intro"]];stage.parts.forEach((p,i)=>d.push([p.id,p.title||`Part ${i+1}`]));d.push(["outro","Encore"]);return d;}
+function moveItemTo(stage,item,srcArr,destKey){const i=srcArr.indexOf(item);if(i<0)return;srcArr.splice(i,1);if(destKey==="intro"||destKey==="outro"){const cur=stage[destKey];stage[destKey]=item;if(cur)srcArr.push(cur);}else{const p=stage.parts.find(p=>p.id===destKey);(p?p.items:srcArr).push(item);}}
+function songItem(it,arr,idx,ctx,sectionKey){
   const el=document.createElement("div");el.className="item";el.draggable=true;el.dataset.uid=it.uid;
   const i=document.createElement("span");i.className="idx";i.textContent=idx+1;
   const n=document.createElement("span");n.className="item-name";n.innerHTML=`${esc(it.title)} <span class="g">· ${esc(it.groupName)}</span>`;
   const mkSel=(map,val,on)=>{const s=document.createElement("select");s.className="tag-sel";Object.entries(map).forEach(([k,t])=>{const o=document.createElement("option");o.value=k;o.textContent=t.label;if(k===val)o.selected=true;s.appendChild(o);});s.onchange=()=>{on(s.value);ctx.save();};return s;};
   const ts=document.createElement("span");ts.className="tags";
+  // 所在段：选它属于 Intro / 哪个 Part / Encore
+  if(ctx.stage){const sec=document.createElement("select");sec.className="tag-sel sec-sel";sectionDests(ctx.stage).forEach(([k,l])=>{const o=document.createElement("option");o.value=k;o.textContent=l;if(k===sectionKey)o.selected=true;sec.appendChild(o);});sec.title="移到哪个段";sec.onchange=()=>{moveItemTo(ctx.stage,it,arr,sec.value);ctx.save();ctx.refresh();};ts.appendChild(sec);}
   ts.append(mkSel(STAGES,it.stage||"big",v=>it.stage=v), mkSel(SEGS,it.seg||"none",v=>it.seg=v));
   const mv=document.createElement("span");mv.className="move";
   mv.append(smallBtn("▲",()=>{if(idx>0){[arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]];ctx.save();ctx.refresh();}}),
@@ -618,7 +623,7 @@ function renderBuilder(){
   const iS=$("#introSlot");iS.innerHTML="";concert.intro?iS.appendChild(slotItem(concert.intro,"intro")):iS.textContent="空 — 选「添加到 Intro」后从曲库点 ＋";
   const oS=$("#outroSlot");oS.innerHTML="";concert.outro?oS.appendChild(slotItem(concert.outro,"outro")):oS.textContent="空 — 选「添加到 Encore」后从曲库点 ＋";
   const w=$("#partsWrap");w.innerHTML="";
-  const ctx={save:persist,refresh:renderBuilder};
+  const ctx={save:persist,refresh:renderBuilder,stage:concert};
   concert.parts.forEach((p,pi)=>{
     const box=document.createElement("div");box.className="part";
     const h=document.createElement("div");h.className="part-head";
@@ -629,7 +634,7 @@ function renderBuilder(){
     h.append(num,ti,c,del);
     const items=document.createElement("div");items.className="part-items";
     if(!p.items.length){const e=document.createElement("div");e.className="part-empty";e.textContent="从左边曲库点 ＋ 加进来";items.appendChild(e);}
-    else p.items.forEach((it,idx)=>items.appendChild(songItem(it,p.items,idx,ctx)));
+    else p.items.forEach((it,idx)=>items.appendChild(songItem(it,p.items,idx,ctx,p.id)));
     box.append(h,items);w.appendChild(box);
   });
   renderStats(); markPlaying(); setSheetLabel("buildHandle",`我的演唱会 · ${collect(true).length} 首`);
@@ -696,7 +701,7 @@ function renderEditor(){
   const bind=(id,k)=>{grid.querySelector(id).addEventListener("input",e=>{r[k]=e.target.value; if(id==="#f_tour"||id==="#f_artist")renderAddCtx();});};
   bind("#f_artist","artist");bind("#f_tour","tour");bind("#f_date","date");bind("#f_city","city");bind("#f_venue","venue");bind("#f_notes","notes");
   // ---- 当晚曲目单（Intro / 可命名 Part / Encore，均可留空）----
-  const ctx={save:saveLogs,refresh:renderEditor};
+  const ctx={save:saveLogs,refresh:renderEditor,stage:r.set};
   const s=r.set;
   const hint=document.createElement("div");hint.className="slot-label";hint.style.margin="4px 0 10px";hint.textContent="当晚曲目单 — 从左侧曲库点 ＋ 添加；Intro / Part 名 / Encore 都可留空";box.appendChild(hint);
   const destWrap=document.createElement("label");destWrap.className="dest";destWrap.style.marginBottom="10px";destWrap.innerHTML="添加到 ";
@@ -718,7 +723,7 @@ function renderEditor(){
     h.append(num,ti,c,del);
     const items=document.createElement("div");items.className="part-items";
     if(!p.items.length){const e=document.createElement("div");e.className="part-empty";e.textContent="从左边曲库点 ＋ 加进来";items.appendChild(e);}
-    else p.items.forEach((it,idx)=>items.appendChild(songItem(it,p.items,idx,ctx)));
+    else p.items.forEach((it,idx)=>items.appendChild(songItem(it,p.items,idx,ctx,p.id)));
     bx.append(h,items);pw.appendChild(bx);
   });
   box.appendChild(pw);
@@ -793,7 +798,7 @@ function copyStr(t){try{navigator.clipboard?.writeText(t);}catch{}const ta=docum
 function flash(sel,txt){const b=$(sel),o=b.textContent;b.textContent=txt;setTimeout(()=>b.textContent=o,1500);}
 
 /* ---------- 海报 ---------- */
-function loadImg(src){return new Promise(res=>{if(!src)return res(null);const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src;});}
+function loadImg(src){return new Promise(res=>{if(!src)return res(null);const im=new Image();im.crossOrigin="anonymous";im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src;});}
 function fitText(g,t,max){t=String(t);if(g.measureText(t).width<=max)return t;let s=t;while(s.length&&g.measureText(s+"…").width>max)s=s.slice(0,-1);return s+"…";}
 function roundRect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
 function roundImg(g,im,x,y,w,h,r){g.save();roundRect(g,x,y,w,h,r);g.clip();g.drawImage(im,x,y,w,h);g.restore();}
