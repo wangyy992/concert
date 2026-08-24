@@ -357,9 +357,10 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 /* ===== 云同步配置：填入你的 Supabase 项目信息即可启用（留空=纯本地）===== */
 const SUPABASE_URL="https://lzyoipuuvnyvokiqzwpf.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_KsK60gATaXbfksohAIAlvg_VcZUK9Pq"; // publishable key（公开安全）
-const COVERS=/*__COVERS__*/{}/*__END__*/;
-const PREVIEWS=/*__PREVIEWS__*/{}/*__END__*/;
-const LIBRARY=/*__LIBRARY__*/{}/*__END__*/;
+const COVERS={};    // 运行时在线加载
+const PREVIEWS={};
+const LIBRARY={};
+const DEFAULTS=[{gid:"itzy",id:1451964345,name:"ITZY",color:"#ff3d7f"},{gid:"lesserafim",id:1616740364,name:"LE SSERAFIM",color:"#5b86ff"}];
 const STAGES={big:{label:"大舞台",color:"#9aa0b5"},small:{label:"小舞台",color:"#e879f9"}};
 const SEGS={none:{label:"无环节",color:"#5b5b70"},patrol:{label:"巡场",color:"#34d399"},float:{label:"花车",color:"#ffb020"},fansa:{label:"饭撒",color:"#e879f9"}};
 function migrateItem(it){if(it&&it.tag!==undefined&&it.stage===undefined){const m={stage:["big","none"],float:["big","float"],patrol:["big","patrol"],fansa:["small","fansa"]}[it.tag]||["big","none"];it.stage=m[0];it.seg=m[1];delete it.tag;}return it;}
@@ -435,6 +436,7 @@ function renderAddCtx(){
 function renderLib(){
   const q=$("#search").value.trim().toLowerCase();
   const list=$("#albumList"); list.innerHTML="";
+  if(!LIBRARY[currentGroup]){list.innerHTML=`<div class="part-empty">正在在线加载曲库…</div>`;return;}
   const gc=LIBRARY[currentGroup].color;
   groupAlbums(currentGroup).forEach(al=>{
     const trs=al.tracks.filter(t=>!q||t.title.toLowerCase().includes(q)||al.title.toLowerCase().includes(q));
@@ -801,6 +803,7 @@ function sendMagic(){
 /* ---------- 在线搜索歌手（iTunes 音乐库，JSONP 免 key）---------- */
 function itunesJSONP(url){return new Promise((res,rej)=>{const cb="itcb_"+Math.random().toString(36).slice(2);const s=document.createElement("script");let done=false;const cleanup=()=>{try{delete window[cb];}catch{}s.remove();};window[cb]=d=>{done=true;res(d);cleanup();};s.onerror=()=>{if(!done){cleanup();rej(new Error("network"));}};s.src=url+(url.includes("?")?"&":"?")+"callback="+cb;document.head.appendChild(s);setTimeout(()=>{if(!done){cleanup();rej(new Error("timeout"));}},12000);});}
 const LIVE_BAD=/(instrumental|\binst\.|karaoke|sped ?up|slowed|reverb|acappella|\(live\b)/i;
+function cleanAlbum(n){return String(n||"").replace(/\s*-\s*The\s+\d+(st|nd|rd|th)\s+(Full\s+|Mini\s+|Studio\s+)?Album.*$/i,"").replace(/\s*-\s*(EP|Single)\s*$/i,"").replace(/\s*\((Apple Music Edition|Deluxe[^)]*|Special Edition[^)]*)\)\s*$/i,"").trim()||String(n||"");}
 async function searchArtist(name){
   name=(name||"").trim(); if(!name)return;
   const btn=$("#artistGo"), old=btn.textContent; btn.textContent="搜索中…"; btn.disabled=true;
@@ -812,34 +815,53 @@ async function searchArtist(name){
     const sr=await itunesJSONP(`https://itunes.apple.com/lookup?id=${artist.artistId}&entity=song&limit=200`);
     const songs=(sr.results||[]).filter(x=>x.wrapperType==="track"&&x.kind==="song"&&x.previewUrl);
     if(!songs.length){alert("这个歌手在 Apple 库里没有可用的试听曲目。");return;}
-    buildLiveGroup(gid, artist.artistName, songs);
+    buildLiveGroup(gid, artist.artistName, songs, "#7c5cff", false);
     currentGroup=gid; $("#search").value=""; renderTabs(); renderLib();
   }catch(e){
     alert("在线搜索需要联网，请在网站 https://wangyy992.github.io/concert/ 上使用（claude.ai 预览沙箱不联网）。");
   }finally{ btn.textContent=old; btn.disabled=false; }
 }
-function buildLiveGroup(gid,name,songs){
+function buildLiveGroup(gid,name,songs,color,isDefault){
   const albums={};
   songs.forEach(s=>{
     if(LIVE_BAD.test(s.collectionName||"")||LIVE_BAD.test(s.trackName||""))return;
-    const al=s.collectionName||"Singles";
-    (albums[al]||(albums[al]={date:s.releaseDate||"",tc:s.trackCount||0,art:s.artworkUrl100||"",tracks:[]})).tracks.push(s);
+    const al=cleanAlbum(s.collectionName)||"Singles";
+    const a=albums[al]||(albums[al]={date:s.releaseDate||"",tc:s.trackCount||0,art:s.artworkUrl100||"",tracks:[]});
+    if((s.releaseDate||"")&&(!a.date||s.releaseDate<a.date))a.date=s.releaseDate;
+    a.tracks.push(s);
   });
-  LIBRARY[gid]={name,color:"#7c5cff",albums:[]}; COVERS[gid]={}; PREVIEWS[gid]={}; liveGroups.add(gid);
+  LIBRARY[gid]={name,color:color||"#7c5cff",albums:[]}; COVERS[gid]={}; PREVIEWS[gid]={};
+  if(isDefault)liveGroups.delete(gid); else liveGroups.add(gid);
   Object.entries(albums).sort((a,b)=>String(b[1].date).localeCompare(String(a[1].date))).forEach(([al,info])=>{
     info.tracks.sort((x,y)=>(x.trackNumber||0)-(y.trackNumber||0));
-    const nAl=al.toLowerCase().replace(/[^a-z0-9]/g,""), seen=new Set();
-    const tracks=[];
+    const nAl=al.toLowerCase().replace(/[^a-z0-9]/g,""), seen=new Set(), tracks=[];
     info.tracks.forEach(s=>{
-      const nt=s.trackName.toLowerCase().replace(/[^a-z0-9]/g,""); if(seen.has(nt))return; seen.add(nt);
+      const nt=s.trackName.toLowerCase().replace(/[^a-z0-9]/g,""); if(!nt||seen.has(nt))return; seen.add(nt);
       PREVIEWS[gid][`${al}|||${s.trackName}`]=s.previewUrl;
       tracks.push({title:s.trackName, lead:nt===nAl, am:(s.trackViewUrl||"").replace(/[?&]uo=4/,"")});
     });
     if(!tracks.length)return;
     if(info.art)COVERS[gid][al]=info.art.replace("100x100bb","300x300bb");
-    const type=/\bEP\b/i.test(al)?"EP":(info.tc>=7?"Full Album":(info.tc<=3?"Single":"EP"));
+    const type=info.tc>=7?"Full Album":(info.tc<=3?"Single":"EP");
     LIBRARY[gid].albums.push({title:al, year:String(info.date||"").slice(0,4), type, tracks});
   });
+}
+/* ---- 默认团（ITZY / LE SSERAFIM）在线加载 + 本地缓存 ---- */
+const LS_DEF="cbo_defaults_v1";
+function loadDefaultsFromCache(){
+  try{const c=JSON.parse(localStorage.getItem(LS_DEF)||"null");if(!c||!c.LIBRARY)return false;
+    DEFAULTS.forEach(d=>{if(c.LIBRARY[d.gid]){LIBRARY[d.gid]=c.LIBRARY[d.gid];COVERS[d.gid]=c.COVERS[d.gid]||{};PREVIEWS[d.gid]=c.PREVIEWS[d.gid]||{};}});
+    return DEFAULTS.every(d=>LIBRARY[d.gid]);}catch{return false;}
+}
+async function refreshDefaults(){
+  for(const d of DEFAULTS){
+    const sr=await itunesJSONP(`https://itunes.apple.com/lookup?id=${d.id}&entity=song&limit=200`);
+    const songs=(sr.results||[]).filter(x=>x.wrapperType==="track"&&x.kind==="song"&&x.previewUrl);
+    if(songs.length)buildLiveGroup(d.gid,d.name,songs,d.color,true);
+  }
+  const cache={LIBRARY:{},COVERS:{},PREVIEWS:{}};
+  DEFAULTS.forEach(d=>{if(LIBRARY[d.gid]){cache.LIBRARY[d.gid]=LIBRARY[d.gid];cache.COVERS[d.gid]=COVERS[d.gid];cache.PREVIEWS[d.gid]=PREVIEWS[d.gid];}});
+  try{localStorage.setItem(LS_DEF,JSON.stringify(cache));}catch{}
 }
 
 /* ---------- 模式切换 ---------- */
@@ -873,7 +895,7 @@ function init(){
   $("#search").oninput=renderLib;
   $("#artistGo").onclick=()=>searchArtist($("#artistInput").value);
   $("#artistInput").addEventListener("keydown",e=>{if(e.key==="Enter")searchArtist($("#artistInput").value);});
-  $("#addSongBtn").onclick=()=>{$("#addGroupHint").textContent=`添加到 ${LIBRARY[currentGroup].name}（归入「自定义」专辑）`;$("#addTitle").value="";show("#addOverlay");};
+  $("#addSongBtn").onclick=()=>{if(!LIBRARY[currentGroup]){alert("曲库还在加载，请稍候。");return;}$("#addGroupHint").textContent=`添加到 ${LIBRARY[currentGroup].name}（归入「自定义」专辑）`;$("#addTitle").value="";show("#addOverlay");};
   $("#pPlay").onclick=()=>{if(!au.src)return playAll();if(au.paused)au.play();else au.pause();};
   $("#pPrev").onclick=prevTrack; $("#pNext").onclick=nextTrack;
   $("#pBar").oninput=()=>{if(au.duration)au.currentTime=au.duration*($("#pBar").value/1000);};
@@ -900,8 +922,12 @@ function init(){
   $("#authSync").onclick=()=>{pushCloud();flash("#authSync","已同步 ✓");};
   document.querySelectorAll(".mode-tab").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
   document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("show");}));
-  setPlayIcon(false); renderTabs(); renderLib(); renderBuilder(); renderAddCtx();
+  setPlayIcon(false);
+  loadDefaultsFromCache();
+  renderTabs(); renderLib(); renderBuilder(); renderAddCtx();
   initCloud();
+  refreshDefaults().then(()=>{if(!LIBRARY[currentGroup])currentGroup="itzy";renderTabs();renderLib();})
+    .catch(()=>{if(!Object.keys(LIBRARY).length)$("#albumList").innerHTML=`<div class="part-empty">在线加载曲库失败——请在网站 wangyy992.github.io/concert 打开使用（此预览环境不联网）。</div>`;});
 }
 document.addEventListener("DOMContentLoaded",init);
 </script>
