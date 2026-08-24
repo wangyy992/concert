@@ -381,7 +381,7 @@ const SUPABASE_ANON_KEY="sb_publishable_KsK60gATaXbfksohAIAlvg_VcZUK9Pq"; // pub
 const COVERS={};    // 运行时在线加载
 const PREVIEWS={};
 const LIBRARY={};
-const DEFAULTS=[{gid:"itzy",id:1451964345,name:"ITZY",color:"#ff3d7f"},{gid:"lesserafim",id:1616740364,name:"LE SSERAFIM",color:"#5b86ff"}];
+const DEFAULTS=[]; // 纯搜索驱动，不预置默认歌手
 const STAGES={big:{label:"大舞台",color:"#9aa0b5"},small:{label:"小舞台",color:"#e879f9"}};
 const SEGS={none:{label:"无环节",color:"#5b5b70"},patrol:{label:"巡场",color:"#34d399"},float:{label:"花车",color:"#ffb020"},fansa:{label:"饭撒",color:"#e879f9"}};
 function migrateItem(it){if(it&&it.tag!==undefined&&it.stage===undefined){const m={stage:["big","none"],float:["big","float"],patrol:["big","patrol"],fansa:["small","fansa"]}[it.tag]||["big","none"];it.stage=m[0];it.seg=m[1];delete it.tag;}return it;}
@@ -404,7 +404,7 @@ function jsave(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}c
 let userAudio=jload(LS.audio,{});
 let custom=jload(LS.custom,[]);
 let logs=jload(LS.log,[]);
-let currentGroup="itzy";
+let currentGroup="";
 let mode="build";
 let editing=null;               // log record being edited (object) or null
 let logDest="intro";            // 观演记录编辑时「添加到」的目标
@@ -458,7 +458,7 @@ function renderAddCtx(){
 function renderLib(){
   const q=$("#search").value.trim().toLowerCase();
   const list=$("#albumList"); list.innerHTML="";
-  if(!LIBRARY[currentGroup]){list.innerHTML=`<div class="part-empty">正在在线加载曲库…</div>`;return;}
+  if(!LIBRARY[currentGroup]){list.innerHTML=Object.keys(LIBRARY).length?`<div class="part-empty">点上方标签选择歌手</div>`:`<div class="part-empty">用上方「搜索歌手」加入任意歌手（ITZY、aespa、NewJeans…）开始编排</div>`;return;}
   const gc=LIBRARY[currentGroup].color;
   groupAlbums(currentGroup).forEach(al=>{
     const trs=al.tracks.filter(t=>!q||t.title.toLowerCase().includes(q)||al.title.toLowerCase().includes(q));
@@ -952,8 +952,7 @@ function init(){
   loadDefaultsFromCache();
   renderTabs(); renderLib(); renderBuilder(); renderAddCtx();
   initCloud();
-  refreshDefaults().then(()=>{if(!LIBRARY[currentGroup])currentGroup="itzy";renderTabs();renderLib();})
-    .catch(()=>{if(!Object.keys(LIBRARY).length)$("#albumList").innerHTML=`<div class="part-empty">在线加载曲库失败——请在网站 wangyy992.github.io/concert 打开使用（此预览环境不联网）。</div>`;});
+  refreshDefaults().then(()=>{if(!LIBRARY[currentGroup])currentGroup=Object.keys(LIBRARY)[0]||"";renderTabs();renderLib();}).catch(()=>{});
 }
 document.addEventListener("DOMContentLoaded",init);
 </script>
