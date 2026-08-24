@@ -180,11 +180,34 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 .ex-h{font-family:var(--disp); font-weight:800; font-size:15px; margin-bottom:9px;}
 .poster-img{width:100%; border-radius:11px; border:1px solid var(--line); display:block; background:var(--panel-2);}
 .ex-ta{width:100%; min-height:104px; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:10px 12px; font-size:12px; font-family:ui-monospace,monospace; resize:vertical; margin-top:8px;}
+/* ---- 视觉细化 ---- */
+.btn:active{transform:translateY(1px);}
+.btn.add-btn{color:var(--itzy); border-color:rgba(255,61,127,.4);}
+.btn.add-btn:hover{background:rgba(255,61,127,.14); border-color:var(--itzy);}
+.album{transition:border-color .18s, transform .18s, box-shadow .18s;}
+.album:hover{border-color:var(--line); box-shadow:0 6px 20px rgba(0,0,0,.28);}
+.album.open{border-color:rgba(255,61,127,.35);}
+.album-cover{transition:transform .18s;}
+.album:hover .album-cover{transform:scale(1.03);}
+.group-tab{transition:.18s;}
+.group-tab.active{box-shadow:0 4px 16px rgba(255,61,127,.28);}
+.item{transition:border-color .15s, background .15s;}
+.item:hover{border-color:var(--muted-2);}
+.part{transition:border-color .18s;}
+.panel{background:linear-gradient(180deg,var(--panel),#12131b);}
+.pbtn{transition:transform .12s, border-color .15s;}
+.pbtn:active{transform:scale(.92);}
+.pill.on{box-shadow:0 0 0 1px rgba(52,211,153,.08) inset;}
+.slot{transition:border-color .15s;}
+.track-name .t{transition:color .15s;}
+.track:hover .track-name .t{color:#fff;}
+
 .hidden{display:none!important;}
 .sheet-handle{display:none;}
 
 /* ---- 移动端 ---- */
 @media(max-width:640px){
+  input,select,textarea{font-size:16px!important;}   /* 防止 iOS 聚焦时自动放大 */
   /* 右侧面板变成底部抽屉 */
   #buildView, #logView{
     position:fixed; left:0; right:0; bottom:64px; z-index:45;
@@ -481,7 +504,7 @@ function trackRow(tr,al){
   row.innerHTML=`<div class="track-name"><div class="t">${tr.lead?'<span class="star">★</span> ':""}${esc(tr.title)}</div>${tr.title_kr?`<div class="kr">${esc(tr.title_kr)}</div>`:""}</div><span class="pill ${on?"on":"off"}">${on?"可播放":"无音源"}</span>`;
   const play=document.createElement("button");play.className="btn mini play"+(on?" on":"");play.textContent="▶";play.disabled=!on;play.onclick=()=>playSingle(itemOf(tr,al));
   const up=document.createElement("button");up.className="btn mini";up.textContent="音频";up.title="上传/替换本地音频";up.onclick=()=>openUpload(currentGroup,al.title,tr.title);
-  const add=document.createElement("button");add.className="btn mini";add.textContent="＋";add.title="加入";add.onclick=()=>addFromLib(tr,al);
+  const add=document.createElement("button");add.className="btn mini add-btn";add.textContent="＋";add.title="加入";add.onclick=()=>addFromLib(tr,al);
   row.append(play,up,add); return row;
 }
 
