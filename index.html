@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Concert Builder</title>
+<title>ConcertBuilder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
@@ -285,13 +285,14 @@ input::placeholder,textarea::placeholder{color:rgba(255,255,255,.5);}
 /* ---- 移动端 ---- */
 @media(max-width:640px){
   input,select,textarea{font-size:16px!important;}   /* 防止 iOS 聚焦时自动放大 */
-  input[type=date]::-webkit-date-and-time-value{font-size:16px;}
+  input[type=date]{min-height:40px; line-height:1.2;}
+  input[type=date]::-webkit-date-and-time-value{font-size:16px!important; text-align:left;}
   input[type=date]::-webkit-datetime-edit,
   input[type=date]::-webkit-datetime-edit-fields-wrapper,
   input[type=date]::-webkit-datetime-edit-text,
   input[type=date]::-webkit-datetime-edit-month-field,
   input[type=date]::-webkit-datetime-edit-day-field,
-  input[type=date]::-webkit-datetime-edit-year-field{font-size:16px;}
+  input[type=date]::-webkit-datetime-edit-year-field{font-size:16px!important;}
   /* 右侧面板变成底部抽屉 */
   #buildView, #logView{
     position:fixed; left:0; right:0; bottom:64px; z-index:38;
@@ -348,7 +349,7 @@ input::placeholder,textarea::placeholder{color:rgba(255,255,255,.5);}
 </style>
 
 <header class="topbar">
-  <div class="brand"><span class="dot">◆</span><span class="brand-text">My Concert Builder</span></div>
+  <div class="brand"><span class="dot">◆</span><span class="brand-text">ConcertBuilder</span></div>
   <div class="mode-tabs">
     <button class="mode-tab active" data-mode="build">编排</button>
     <button class="mode-tab" data-mode="log">观演记录</button>
@@ -925,7 +926,7 @@ async function drawPoster(prog){
     });
     y+=secGap;
   });
-  g.fillStyle="#6f6e86"; g.font='500 22px Archivo'; g.fillText(`${items.length} songs · My Concert Builder`,pad,H-46);
+  g.fillStyle="#6f6e86"; g.font='500 22px Archivo'; g.fillText(`${items.length} songs · ConcertBuilder`,pad,H-46);
   return c.toDataURL("image/png");
 }
 
@@ -1036,6 +1037,11 @@ function sendMagic(){
 /* ---------- 在线搜索歌手（iTunes 音乐库，JSONP 免 key）---------- */
 function itunesJSONP(url){return new Promise((res,rej)=>{const cb="itcb_"+Math.random().toString(36).slice(2);const s=document.createElement("script");let done=false;const cleanup=()=>{try{delete window[cb];}catch{}s.remove();};window[cb]=d=>{done=true;res(d);cleanup();};s.onerror=()=>{if(!done){cleanup();rej(new Error("network"));}};s.src=url+(url.includes("?")?"&":"?")+"callback="+cb;document.head.appendChild(s);setTimeout(()=>{if(!done){cleanup();rej(new Error("timeout"));}},12000);});}
 const LIVE_BAD=/(instrumental|\binst\.|karaoke|sped ?up|slowed|reverb|acappella|\(live\b)/i;
+/* 规范化标题用于比对/去重：只去掉空白与标点，保留日文 / 韩文等非拉丁字符
+   （旧实现用 [^a-z0-9] 会把纯日文曲名清成空串，导致整张日专被丢掉） */
+function normTitle(s){return String(s||"").toLowerCase()
+  .replace(/[\s　]+/g,"")
+  .replace(/[.,!?'"“”‘’`´·・…\-–—_~/\\()\[\]{}:;&+*@#$%^=|<>]/g,"");}
 function cleanAlbum(n){return String(n||"").replace(/\s*-\s*The\s+\d+(st|nd|rd|th)\s+(Full\s+|Mini\s+|Studio\s+)?Album.*$/i,"").replace(/\s*-\s*(EP|Single)\s*$/i,"").replace(/\s*\((Apple Music Edition|Deluxe[^)]*|Special Edition[^)]*)\)\s*$/i,"").trim()||String(n||"");}
 async function searchArtist(name){
   name=(name||"").trim(); if(!name)return;
@@ -1054,12 +1060,26 @@ async function searchArtist(name){
 }
 /* 按专辑逐张拉完整曲目（含成员 solo 等署名不同的歌），并行请求后合并 */
 async function loadArtistFull(gid, artistId, name, color, isDefault){
-  const albRes=await itunesJSONP(`https://itunes.apple.com/lookup?id=${artistId}&entity=album&limit=200`);
-  const albums=(albRes.results||[]).filter(x=>x.collectionType==="Album"&&!LIVE_BAD.test(x.collectionName||""));
+  // 美区 + 日区都查：日专/日单常常只在日区上架
+  const stores=await Promise.all(["US","JP"].map(c=>
+    itunesJSONP(`https://itunes.apple.com/lookup?id=${artistId}&entity=album&limit=200&country=${c}`)
+      .then(r=>(r.results||[]).filter(x=>x.collectionType==="Album").map(a=>Object.assign({_c:c},a)))
+      .catch(()=>[])));
+  const albums=stores.flat().filter(x=>!LIVE_BAD.test(x.collectionName||""));
+  // 同名专辑保留各区候选：有的日专在美区能列出、但曲目为空，需要回退到日区取
   const byName={};
-  albums.forEach(a=>{const k=cleanAlbum(a.collectionName).toLowerCase();const sc=(/[\(\[]/.test(a.collectionName)?0:1000)+(a.trackCount||0);if(!byName[k]||sc>byName[k]._s)byName[k]=Object.assign({_s:sc},a);});
-  const chosen=Object.values(byName);
-  const lists=await Promise.all(chosen.map(a=>itunesJSONP(`https://itunes.apple.com/lookup?id=${a.collectionId}&entity=song&limit=60`).then(r=>(r.results||[]).filter(x=>x.wrapperType==="track")).catch(()=>[])));
+  albums.forEach(a=>{const k=normTitle(cleanAlbum(a.collectionName));const sc=(/[\(\[]/.test(a.collectionName)?0:1000)+(a.trackCount||0);(byName[k]||(byName[k]=[])).push(Object.assign({_s:sc},a));});
+  const chosen=Object.values(byName).map(l=>l.sort((x,y)=>y._s-x._s).slice(0,3));
+  const lists=await Promise.all(chosen.map(async cands=>{
+    for(const a of cands){
+      try{
+        const r=await itunesJSONP(`https://itunes.apple.com/lookup?id=${a.collectionId}&entity=song&limit=60&country=${a._c||"US"}`);
+        const t=(r.results||[]).filter(x=>x.wrapperType==="track");
+        if(t.length)return t;
+      }catch{}
+    }
+    return [];
+  }));
   buildLiveGroup(gid, name, lists.flat(), color, isDefault);
 }
 function buildLiveGroup(gid,name,songs,color,isDefault){
@@ -1075,9 +1095,9 @@ function buildLiveGroup(gid,name,songs,color,isDefault){
   if(isDefault)liveGroups.delete(gid); else liveGroups.add(gid);
   Object.entries(albums).sort((a,b)=>String(b[1].date).localeCompare(String(a[1].date))).forEach(([al,info])=>{
     info.tracks.sort((x,y)=>(x.trackNumber||0)-(y.trackNumber||0));
-    const nAl=al.toLowerCase().replace(/[^a-z0-9]/g,""), seen=new Set(), tracks=[];
+    const nAl=normTitle(al), seen=new Set(), tracks=[];
     info.tracks.forEach(s=>{
-      const nt=s.trackName.toLowerCase().replace(/[^a-z0-9]/g,""); if(!nt||seen.has(nt))return; seen.add(nt);
+      const nt=normTitle(s.trackName); if(!nt||seen.has(nt))return; seen.add(nt);
       if(s.previewUrl)PREVIEWS[gid][`${al}|||${s.trackName}`]=s.previewUrl;
       tracks.push({title:s.trackName, lead:nt===nAl, am:(s.trackViewUrl||"").replace(/[?&]uo=4/,"")});
     });
