@@ -187,8 +187,8 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 @media(max-width:640px){
   /* 右侧面板变成底部抽屉 */
   #buildView, #logView{
-    position:fixed; left:0; right:0; bottom:64px; z-index:35;
-    max-height:82vh; overflow-y:auto; margin:0; border:1px solid var(--line);
+    position:fixed; left:0; right:0; bottom:64px; z-index:45;
+    max-height:78vh; overflow-y:auto; margin:0; border:1px solid var(--line);
     border-radius:18px 18px 0 0; box-shadow:0 -12px 40px rgba(0,0,0,.5);
     transform:translateY(calc(100% - 54px)); transition:transform .28s cubic-bezier(.4,0,.2,1);
   }
@@ -240,7 +240,6 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
     <button class="mode-tab active" data-mode="build">编排</button>
     <button class="mode-tab" data-mode="log">观演记录</button>
   </div>
-  <input id="concertName" class="concert-name" placeholder="给你的演唱会起个名字…">
   <div class="top-actions" id="buildActions">
     <button id="playAllBtn" class="btn btn-primary">▶ 连播整场</button>
     <button id="exportBtn" class="btn">导出 / 分享</button>
@@ -269,6 +268,7 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
   <section class="panel" id="buildView">
     <div class="sheet-handle" id="buildHandle"><span class="sh-label">我的演唱会</span><span class="sh-chev">▲</span></div>
     <div class="panel-head"><h2>我的演唱会</h2><label class="dest">添加到 <select id="destSelect"></select></label></div>
+    <input id="concertName" class="concert-name" placeholder="给这场演唱会起个名字…" style="width:100%;margin-bottom:14px">
     <div class="slot-block"><div class="slot-label">INTRO</div><div id="introSlot" class="slot intro"></div></div>
     <div id="partsWrap" class="parts-wrap"></div>
     <button id="addPartBtn" class="btn btn-ghost" style="width:100%">＋ 添加一个 Part</button>
@@ -905,7 +905,6 @@ function setMode(m){
   $("#logView").classList.toggle("hidden",build);
   $("#buildActions").classList.toggle("hidden",!build);
   $("#logActions").classList.toggle("hidden",build);
-  $("#concertName").classList.toggle("hidden",!build);
   renderAddCtx();
   if(build)renderBuilder(); else renderLog();
 }
