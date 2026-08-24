@@ -458,7 +458,7 @@ function renderAddCtx(){
 function renderLib(){
   const q=$("#search").value.trim().toLowerCase();
   const list=$("#albumList"); list.innerHTML="";
-  if(!LIBRARY[currentGroup]){list.innerHTML=Object.keys(LIBRARY).length?`<div class="part-empty">点上方标签选择歌手</div>`:`<div class="part-empty">用上方「搜索歌手」加入任意歌手（ITZY、aespa、NewJeans…）开始编排</div>`;return;}
+  if(!LIBRARY[currentGroup]){list.innerHTML=Object.keys(LIBRARY).length?`<div class="part-empty">点上方标签选择歌手</div>`:`<div class="part-empty">用上方「搜索歌手」加入任意歌手（ITZY、aespa、IVE…）开始编排</div>`;return;}
   const gc=LIBRARY[currentGroup].color;
   groupAlbums(currentGroup).forEach(al=>{
     const trs=al.tracks.filter(t=>!q||t.title.toLowerCase().includes(q)||al.title.toLowerCase().includes(q));
