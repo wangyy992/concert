@@ -258,7 +258,7 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 <main class="layout">
   <section class="panel">
     <div class="panel-head"><h2>曲库</h2><div class="group-tabs" id="groupTabs"></div></div>
-    <div class="artist-search"><input id="artistInput" placeholder="🔎 搜索任意歌手加入曲库（aespa、NewJeans、TWICE…）"><button id="artistGo" class="btn">搜索</button></div>
+    <div class="artist-search"><input id="artistInput" placeholder=""><button id="artistGo" class="btn">搜索歌手</button></div>
     <div class="add-ctx" id="addCtx"></div>
     <input id="search" class="search" placeholder="搜索歌曲 / 专辑…">
     <div id="albumList" class="album-list"></div>
@@ -272,7 +272,7 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
     <div class="slot-block"><div class="slot-label">INTRO</div><div id="introSlot" class="slot intro"></div></div>
     <div id="partsWrap" class="parts-wrap"></div>
     <button id="addPartBtn" class="btn btn-ghost" style="width:100%">＋ 添加一个 Part</button>
-    <div class="slot-block" style="margin-top:14px"><div class="slot-label">ENCORE 安可</div><div id="outroSlot" class="slot outro"></div></div>
+    <div class="slot-block" style="margin-top:14px"><div class="slot-label">ENCORE</div><div id="outroSlot" class="slot outro"></div></div>
     <div class="stat-bar" id="statBar"></div>
   </section>
 
@@ -532,7 +532,7 @@ function addFromLib(tr,al){
 }
 
 /* ---------- BUILD 视图 ---------- */
-function renderDest(){const s=$("#destSelect"),prev=s.value;s.innerHTML="";const add=(v,l)=>{const o=document.createElement("option");o.value=v;o.textContent=l;s.appendChild(o);};add("intro","Intro");concert.parts.forEach((p,i)=>add(p.id,p.title||`Part ${i+1}`));add("outro","Encore 安可");if([...s.options].some(o=>o.value===prev))s.value=prev;else if(concert.parts.length)s.value=concert.parts.at(-1).id;}
+function renderDest(){const s=$("#destSelect"),prev=s.value;s.innerHTML="";const add=(v,l)=>{const o=document.createElement("option");o.value=v;o.textContent=l;s.appendChild(o);};add("intro","Intro");concert.parts.forEach((p,i)=>add(p.id,p.title||`Part ${i+1}`));add("outro","Encore");if([...s.options].some(o=>o.value===prev))s.value=prev;else if(concert.parts.length)s.value=concert.parts.at(-1).id;}
 function slotItem(it,kind){const el=document.createElement("div");el.className="item";el.dataset.uid=it.uid;el.innerHTML=`<span class="item-name">${esc(it.title)} <span class="g">· ${esc(it.groupName)}</span></span>`;el.append(playBtnFor(it),smallBtn("✕",()=>{if(kind==="intro")concert.intro=null;else concert.outro=null;persist();renderBuilder();}));return el;}
 function renderBuilder(){
   renderDest();
@@ -644,7 +644,7 @@ function renderEditor(){
   });
   box.appendChild(pw);
   const addPart=smallBtn("＋ 添加一个 Part",()=>{s.parts.push({id:uid(),title:"",items:[]});saveLogs();renderEditor();});addPart.className="btn btn-ghost";addPart.style.width="100%";box.appendChild(addPart);
-  const bEnc=document.createElement("div");bEnc.className="slot-block";bEnc.style.marginTop="12px";bEnc.innerHTML=`<div class="slot-label">ENCORE 安可（可留空）</div>`;bEnc.appendChild(recSlot(s.outro,"outro","空 — 选「添加到 Encore」再从曲库点 ＋"));box.appendChild(bEnc);
+  const bEnc=document.createElement("div");bEnc.className="slot-block";bEnc.style.marginTop="12px";bEnc.innerHTML=`<div class="slot-label">ENCORE（可留空）</div>`;bEnc.appendChild(recSlot(s.outro,"outro","空 — 选「添加到 Encore」再从曲库点 ＋"));box.appendChild(bEnc);
   // actions
   const acts=document.createElement("div");acts.className="modal-actions";acts.style.justifyContent="space-between";
   const delBtn=smallBtn("删除这条",()=>{if(r._new){editing=null;renderLog();return;}if(confirm("删除这条观演记录？")){logs=logs.filter(x=>x.id!==r.id);saveLogs();editing=null;renderLog();}});delBtn.classList.add("btn-ghost");
