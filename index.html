@@ -511,7 +511,7 @@ function migrateRecord(r){
 }
 function recordItems(r){const s=r.set||{parts:[]};const q=[];if(s.intro)q.push(s.intro);(s.parts||[]).forEach(p=>p.items.forEach(i=>q.push(i)));if(s.outro)q.push(s.outro);return q;}
 
-const LS={state:"cbo_state_v2",audio:"cbo_audio_v1",custom:"cbo_custom_v1",log:"cbo_log_v1"};
+const LS={state:"cbo_state_v2",audio:"cbo_audio_v1",custom:"cbo_custom_v1",log:"cbo_log_v1",touched:"cbo_touched_v1",device:"cbo_device_v1"};
 const $=(s,r=document)=>r.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,9);
 const key=(g,a,t)=>`${g}|||${a}|||${t}`;
@@ -519,7 +519,49 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 function jload(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f;}catch{return f;}}
 function jsave(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch{return false;}}
 
-let userAudio=jload(LS.audio,{});
+/* ---------- 本地音频：IndexedDB（存 Blob，容量远大于 localStorage）---------- */
+const IDB_NAME="cbo_audio", IDB_STORE="files";
+let idbPromise=null;
+function idb(){
+  if(idbPromise)return idbPromise;
+  idbPromise=new Promise((res,rej)=>{
+    const r=indexedDB.open(IDB_NAME,1);
+    r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains(IDB_STORE))db.createObjectStore(IDB_STORE);};
+    r.onsuccess=()=>res(r.result);
+    r.onerror=()=>rej(r.error);
+  });
+  return idbPromise;
+}
+function idbWrite(fn){return idb().then(db=>new Promise((res,rej)=>{
+  const tx=db.transaction(IDB_STORE,"readwrite");fn(tx.objectStore(IDB_STORE));
+  tx.oncomplete=()=>res(true);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error);
+}));}
+const idbPut=(k,v)=>idbWrite(st=>st.put(v,k));
+const idbDel=k=>idbWrite(st=>st.delete(k));
+function idbAll(){return idb().then(db=>new Promise((res,rej)=>{
+  const out={},cur=db.transaction(IDB_STORE,"readonly").objectStore(IDB_STORE).openCursor();
+  cur.onsuccess=e=>{const c=e.target.result;if(c){out[c.key]=c.value;c.continue();}else res(out);};
+  cur.onerror=()=>rej(cur.error);
+}));}
+
+let userAudio={};   // key -> blob: object URL（每次启动由 IDB 重建）
+async function initUserAudio(){
+  try{
+    // 迁移：把旧的 localStorage base64 音频搬进 IDB，然后释放那块空间
+    const old=jload(LS.audio,null);
+    if(old&&typeof old==="object"&&Object.keys(old).length){
+      for(const [k,v] of Object.entries(old)){
+        if(typeof v==="string"&&v.startsWith("data:")){
+          try{await idbPut(k, await (await fetch(v)).blob());}catch{}
+        }
+      }
+      try{localStorage.removeItem(LS.audio);}catch{}
+    }
+    const all=await idbAll();
+    Object.entries(all).forEach(([k,blob])=>{try{userAudio[k]=URL.createObjectURL(blob);}catch{}});
+  }catch(e){console.warn("audio store unavailable",e);}
+}
+
 let custom=jload(LS.custom,[]);
 let logs=jload(LS.log,[]);
 let currentGroup="";
@@ -527,8 +569,8 @@ let mode="build";
 let editing=null;               // log record being edited (object) or null
 let logDest="intro";            // 观演记录编辑时「添加到」的目标
 let concert=jload(LS.state,null)||{name:"",intro:null,parts:[{id:uid(),title:"Part 1",items:[]}],outro:null};
-const persist=()=>{jsave(LS.state,concert);scheduleCloudPush();};
-const saveLogs=()=>{jsave(LS.log,logs);scheduleCloudPush();};
+const persist=()=>{jsave(LS.state,concert);touchLocal();scheduleCloudPush();};
+const saveLogs=()=>{jsave(LS.log,logs);touchLocal();scheduleCloudPush();};
 
 /* ---------- 解析 ---------- */
 const liveGroups=new Set();   // 在线搜索加入的歌手 group id
@@ -896,8 +938,35 @@ function show(s){$(s).classList.add("show");} function hide(s){$(s).classList.re
 function copyFrom(sel){const el=$(sel);el.select();try{document.execCommand("copy");}catch{}try{navigator.clipboard?.writeText(el.value);}catch{}}
 function doImport(){try{const d=JSON.parse($("#importText").value);if(d.concert)concert=d.concert;if(d.custom){custom=d.custom;jsave(LS.custom,custom);}if(d.logs){logs=d.logs;saveLogs();}persist();$("#concertName").value=concert.name||"";renderTabs();renderLib();renderBuilder();renderLog();hide("#importOverlay");}catch{alert("解析失败，请确认是本工具导出的存档 JSON");}}
 
-/* ---------- 云同步（Supabase）---------- */
-let sb=null, cloudUser=null, pushTimer=null, applyingCloud=false;
+/* ---------- 云同步（Supabase）----------
+   冲突策略：payload 带 touchedAt(本地最后修改时刻) 与 deviceId。
+   推送前先读一次服务端；若它比我们上次看到的更新、且不是本设备写的，
+   就先合并（记录按 id 取并集，双方都有的以较新快照为准），再写回。 */
+let sb=null, cloudUser=null, pushTimer=null, applyingCloud=false, cloudSeenAt=null;
+let localTouchedAt=jload(LS.touched,0)||0;
+let deviceId=jload(LS.device,null);
+if(!deviceId){deviceId=uid()+uid();jsave(LS.device,deviceId);}
+function touchLocal(){localTouchedAt=Date.now();jsave(LS.touched,localTouchedAt);}
+function applyLocal(){
+  jsave(LS.state,concert);jsave(LS.custom,custom);jsave(LS.log,logs);
+  $("#concertName").value=concert.name||"";updateBuildHandle();
+  renderTabs();renderLib();if(mode==="build")renderBuilder();else renderLog();
+}
+/* 把远端快照并进本地：只多不少，避免任一端的记录被静默抹掉 */
+function mergeRemote(d){
+  if(!d)return false;
+  const remoteNewer=(d.touchedAt||0)>localTouchedAt;
+  const byId={};(d.logs||[]).forEach(r=>byId[r.id]=r);
+  const have=new Set(logs.map(r=>r.id));
+  let merged=logs.map(r=>(remoteNewer&&byId[r.id])?byId[r.id]:r);
+  (d.logs||[]).forEach(r=>{if(!have.has(r.id))merged.push(r);});
+  logs=merged.map(migrateRecord);
+  const seen=new Set(custom.map(c=>`${c.group}|||${c.album}|||${c.title}`));
+  (d.custom||[]).forEach(c=>{const k=`${c.group}|||${c.album}|||${c.title}`;if(!seen.has(k)){seen.add(k);custom.push(c);}});
+  if(remoteNewer&&d.concert)concert=d.concert;
+  if(remoteNewer)localTouchedAt=d.touchedAt||localTouchedAt;
+  return remoteNewer;
+}
 function initCloud(){
   if(!SUPABASE_URL||!SUPABASE_ANON_KEY||!window.supabase)return;
   try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);}catch(e){return;}
@@ -910,24 +979,41 @@ function updateAuthUI(){const btn=$("#authBtn");if(!btn)return;btn.textContent=c
 async function pullCloud(){
   if(!cloudUser||!sb)return;
   try{
-    const {data,error}=await sb.from("app_state").select("data").eq("user_id",cloudUser.id).maybeSingle();
+    const {data,error}=await sb.from("app_state").select("data,updated_at").eq("user_id",cloudUser.id).maybeSingle();
     if(error)throw error;
     if(data&&data.data){
-      applyingCloud=true;const d=data.data;
-      if(d.concert)concert=d.concert;
-      if(d.custom){custom=d.custom;jsave(LS.custom,custom);}
-      if(d.logs){logs=d.logs;jsave(LS.log,logs);}
-      jsave(LS.state,concert);applyingCloud=false;
-      $("#concertName").value=concert.name||"";
-      renderTabs();renderLib();if(mode==="build")renderBuilder();else renderLog();
+      cloudSeenAt=data.updated_at||cloudSeenAt;
+      applyingCloud=true;
+      mergeRemote(data.data);
+      applyLocal();
+      applyingCloud=false;
+      // 本地有远端没有的内容（离线期间的改动）→ 立刻写回，避免下次被覆盖
+      pushCloud();
     }else{pushCloud();}
   }catch(e){console.warn("cloud pull failed",e);}
 }
 function scheduleCloudPush(){if(!cloudUser||applyingCloud)return;clearTimeout(pushTimer);pushTimer=setTimeout(pushCloud,1200);}
 async function pushCloud(){
   if(!cloudUser||!sb)return;
-  try{await sb.from("app_state").upsert({user_id:cloudUser.id,data:{concert,custom,logs},updated_at:new Date().toISOString()});}
-  catch(e){console.warn("cloud push failed",e);}
+  try{
+    // 先看服务端有没有被别的设备动过
+    const {data:row}=await sb.from("app_state").select("data,updated_at").eq("user_id",cloudUser.id).maybeSingle();
+    const changedElsewhere = row && row.updated_at && cloudSeenAt && row.updated_at!==cloudSeenAt
+                             && row.data && row.data.deviceId!==deviceId;
+    if(changedElsewhere){
+      applyingCloud=true;
+      const took=mergeRemote(row.data);
+      applyLocal();
+      applyingCloud=false;
+      if(took)console.info("cloud: merged newer remote snapshot");
+    }
+    const payload={concert,custom,logs,touchedAt:localTouchedAt,deviceId};
+    const {data:up,error}=await sb.from("app_state")
+      .upsert({user_id:cloudUser.id,data:payload,updated_at:new Date().toISOString()})
+      .select("updated_at").maybeSingle();
+    if(error)throw error;
+    cloudSeenAt=up?.updated_at||cloudSeenAt;
+  }catch(e){console.warn("cloud push failed",e);}
 }
 function openAuth(){
   const inOut=!!cloudUser;
@@ -1062,8 +1148,22 @@ function init(){
   $("#pPlay").onclick=()=>{if(!au.src)return playAll();if(au.paused)au.play();else au.pause();};
   $("#pPrev").onclick=prevTrack; $("#pNext").onclick=nextTrack;
   $("#pBar").oninput=()=>{if(au.duration)au.currentTime=au.duration*($("#pBar").value/1000);};
-  $("#upFile").addEventListener("change",e=>{const f=e.target.files[0];if(!f||!upCtx)return;const r=new FileReader();r.onload=()=>{const k=key(upCtx.g,upCtx.al,upCtx.t);userAudio[k]=r.result;if(!jsave(LS.audio,userAudio)){delete userAudio[k];alert("浏览器本地存储空间不足（试试更小的文件）。");}hide("#upOverlay");renderLib();if(mode==="build")renderBuilder();else renderLog();};r.readAsDataURL(f);});
-  $("#upClear").onclick=()=>{if(upCtx){delete userAudio[key(upCtx.g,upCtx.al,upCtx.t)];jsave(LS.audio,userAudio);}hide("#upOverlay");renderLib();};
+  $("#upFile").addEventListener("change",async e=>{
+    const f=e.target.files[0];if(!f||!upCtx)return;
+    const k=key(upCtx.g,upCtx.al,upCtx.t);
+    try{
+      await idbPut(k,f);                                   // 直接存 Blob，不再 base64
+      if(userAudio[k])URL.revokeObjectURL(userAudio[k]);
+      userAudio[k]=URL.createObjectURL(f);
+    }catch(err){alert("保存音频失败："+((err&&err.message)||err));}
+    hide("#upOverlay");renderLib();if(mode==="build")renderBuilder();else renderLog();
+  });
+  $("#upClear").onclick=async ()=>{
+    if(upCtx){const k=key(upCtx.g,upCtx.al,upCtx.t);
+      try{await idbDel(k);}catch{}
+      if(userAudio[k]){URL.revokeObjectURL(userAudio[k]);delete userAudio[k];}}
+    hide("#upOverlay");renderLib();if(mode==="build")renderBuilder();else renderLog();
+  };
   $("#upCancel").onclick=()=>hide("#upOverlay");
   $("#posterSave").onclick=()=>{if(!posterUrl){alert("海报还在生成，请稍候");return;}const a=document.createElement("a");a.href=posterUrl;a.download=(($("#exTitle").textContent||"concert").replace(/[\\/:*?"<>|]/g,"").trim()||"concert")+".png";document.body.appendChild(a);a.click();a.remove();};
   $("#toTMM").onclick=()=>{copyStr($("#pairText").value);window.open("https://www.tunemymusic.com/transfer","_blank");flash("#toTMM","已复制，去粘贴 →");};
@@ -1075,14 +1175,14 @@ function init(){
   $("#copyText").onclick=()=>copyFrom("#exportText"); $("#copyJson").onclick=()=>copyFrom("#exportJson");
   $("#importCancel").onclick=()=>hide("#importOverlay"); $("#importDo").onclick=doImport;
   $("#addCancel").onclick=()=>hide("#addOverlay");
-  $("#addDo").onclick=()=>{const t=$("#addTitle").value.trim();if(!t)return;custom.push({group:currentGroup,album:"自定义",title:t});jsave(LS.custom,custom);scheduleCloudPush();hide("#addOverlay");renderLib();};
+  $("#addDo").onclick=()=>{const t=$("#addTitle").value.trim();if(!t)return;custom.push({group:currentGroup,album:"自定义",title:t});jsave(LS.custom,custom);touchLocal();scheduleCloudPush();hide("#addOverlay");renderLib();};
   $("#authBtn").onclick=openAuth;
   $("#authCancel").onclick=()=>hide("#authOverlay");
   $("#authDone").onclick=()=>hide("#authOverlay");
   $("#authSend").onclick=sendMagic;
   $("#authEmail").addEventListener("keydown",e=>{if(e.key==="Enter")sendMagic();});
   $("#authLogout").onclick=()=>{if(sb)sb.auth.signOut();hide("#authOverlay");};
-  $("#authSync").onclick=()=>{pushCloud();flash("#authSync","已同步 ✓");};
+  $("#authSync").onclick=async ()=>{$("#authSync").textContent="同步中…";await pullCloud();flash("#authSync","已同步 ✓");};
   $("#menuBtn").onclick=e=>{e.stopPropagation();toggleMenu();};
   document.querySelectorAll(".menu-item").forEach(b=>b.addEventListener("click",closeMenu));
   document.addEventListener("click",e=>{if(!e.target.closest(".menu-wrap"))closeMenu();});
@@ -1091,6 +1191,7 @@ function init(){
   document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("show");}));
   setPlayIcon(false);
   setMode("build");
+  initUserAudio().then(()=>{renderLib();if(mode==="build")renderBuilder();else renderLog();});
   loadDefaultsFromCache();
   renderTabs(); renderLib(); renderBuilder(); renderAddCtx();
   initCloud();
