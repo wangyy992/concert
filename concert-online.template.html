@@ -181,6 +181,26 @@ input[type=range].bar::-moz-range-thumb{width:13px; height:13px; border:none; bo
 .ex-h{font-family:var(--disp); font-weight:800; font-size:15px; margin-bottom:9px;}
 .poster-img{width:100%; border-radius:11px; border:1px solid var(--line); display:block; background:var(--panel-2);}
 .ex-ta{width:100%; min-height:104px; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:10px 12px; font-size:12px; font-family:ui-monospace,monospace; resize:vertical; margin-top:8px;}
+/* ---- 顶栏下拉菜单 ---- */
+.menu-wrap{position:relative;}
+.menu-btn{display:grid; place-items:center; padding:8px 11px;}
+.menu{
+  position:absolute; right:0; top:calc(100% + 8px); z-index:70; min-width:184px;
+  display:flex; flex-direction:column; padding:6px; border-radius:14px;
+  background:rgba(28,23,52,.92); -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px);
+  border:1px solid rgba(255,255,255,.24); box-shadow:0 16px 44px rgba(0,0,0,.5);
+}
+.menu-item{
+  appearance:none; background:transparent; border:none; color:var(--text);
+  text-align:left; padding:11px 13px; border-radius:9px; cursor:pointer;
+  font-size:14px; font-weight:500; white-space:nowrap;
+}
+.menu-item:hover{background:rgba(255,255,255,.14);}
+.menu-item:focus-visible{outline:2px solid var(--lsf); outline-offset:-2px;}
+.menu-item.danger{color:#ff8aa8;}
+.menu-item.danger:hover{background:rgba(255,61,127,.18);}
+.menu-sep{height:1px; background:rgba(255,255,255,.14); margin:5px 8px;}
+
 /* ---- 视觉细化 ---- */
 .btn:active{transform:translateY(1px);}
 .btn.add-btn{color:var(--itzy); border-color:rgba(255,61,127,.4);}
@@ -265,6 +285,13 @@ input::placeholder,textarea::placeholder{color:rgba(255,255,255,.5);}
 /* ---- 移动端 ---- */
 @media(max-width:640px){
   input,select,textarea{font-size:16px!important;}   /* 防止 iOS 聚焦时自动放大 */
+  input[type=date]::-webkit-date-and-time-value{font-size:16px;}
+  input[type=date]::-webkit-datetime-edit,
+  input[type=date]::-webkit-datetime-edit-fields-wrapper,
+  input[type=date]::-webkit-datetime-edit-text,
+  input[type=date]::-webkit-datetime-edit-month-field,
+  input[type=date]::-webkit-datetime-edit-day-field,
+  input[type=date]::-webkit-datetime-edit-year-field{font-size:16px;}
   /* 右侧面板变成底部抽屉 */
   #buildView, #logView{
     position:fixed; left:0; right:0; bottom:64px; z-index:38;
@@ -286,9 +313,12 @@ input::placeholder,textarea::placeholder{color:rgba(255,255,255,.5);}
   body{padding-bottom:128px;}
   .player{background:rgba(15,12,30,.92);}
   .album-list{max-height:none;}
-  .topbar{padding:10px 13px; gap:9px;}
-  .brand{font-size:17px;}
-  .mode-tabs{order:2;}
+  .topbar{padding:10px 13px; gap:9px; flex-wrap:nowrap;}
+  .brand{font-size:20px;}
+  .brand-text{display:none;}          /* 手机上只留 ◆，顶栏压成一行 */
+  .mode-tabs{flex:none;}
+  .mode-tab{padding:6px 12px;}
+  .top-actions{flex-wrap:nowrap; margin-left:auto;}
   .concert-name{order:5; flex-basis:100%; min-width:0;}
   .top-actions{margin-left:auto; flex-wrap:wrap; gap:6px;}
   .top-actions .btn{padding:8px 11px;}
@@ -318,23 +348,28 @@ input::placeholder,textarea::placeholder{color:rgba(255,255,255,.5);}
 </style>
 
 <header class="topbar">
-  <div class="brand"><span class="dot">◆</span> My Concert Builder</div>
+  <div class="brand"><span class="dot">◆</span><span class="brand-text">My Concert Builder</span></div>
   <div class="mode-tabs">
     <button class="mode-tab active" data-mode="build">编排</button>
     <button class="mode-tab" data-mode="log">观演记录</button>
   </div>
-  <div class="top-actions" id="buildActions">
+  <div class="top-actions">
     <button id="playAllBtn" class="btn btn-primary">▶ 连播整场</button>
-    <button id="exportBtn" class="btn">导出 / 分享</button>
-    <button id="importBtn" class="btn">导入</button>
-    <button id="resetBtn" class="btn btn-ghost">重置</button>
+    <button id="newLogBtn" class="btn btn-primary hidden">＋ 添加观演记录</button>
+    <div class="menu-wrap">
+      <button id="menuBtn" class="btn menu-btn" aria-haspopup="true" aria-expanded="false" title="更多">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+      </button>
+      <div class="menu hidden" id="menu" role="menu">
+        <button class="menu-item" id="exportBtn" role="menuitem">导出 / 分享</button>
+        <button class="menu-item" id="exportBtn2" role="menuitem">导出全部</button>
+        <button class="menu-item" id="importBtn" role="menuitem">导入</button>
+        <button class="menu-item hidden" id="authBtn" role="menuitem">登录</button>
+        <div class="menu-sep"></div>
+        <button class="menu-item danger" id="resetBtn" role="menuitem">重置编排</button>
+      </div>
+    </div>
   </div>
-  <div class="top-actions hidden" id="logActions">
-    <button id="newLogBtn" class="btn btn-primary">＋ 添加观演记录</button>
-    <button id="importBtn2" class="btn">导入</button>
-    <button id="exportBtn2" class="btn">导出全部</button>
-  </div>
-  <button id="authBtn" class="btn hidden" title="邮箱登录 / 云端同步">登录</button>
 </header>
 
 <main class="layout">
@@ -676,7 +711,7 @@ function renderLog(){
     wrap.appendChild(card);
   });
 }
-function openEditor(id){editing = id?logs.find(r=>r.id===id):{id:uid(),artist:LIBRARY[currentGroup].name,tour:"",date:"",city:"",venue:"",rating:0,notes:"",set:{intro:null,parts:[{id:uid(),title:"",items:[]}],outro:null},_new:!id};
+function openEditor(id){editing = id?logs.find(r=>r.id===id):{id:uid(),artist:(LIBRARY[currentGroup]&&LIBRARY[currentGroup].name)||"",tour:"",date:"",city:"",venue:"",rating:0,notes:"",set:{intro:null,parts:[{id:uid(),title:"",items:[]}],outro:null},_new:!id};
   migrateRecord(editing); logDest="p0"; renderAddCtx(); renderEditor();}
 function renderEditor(){
   $("#logListWrap").classList.add("hidden"); const box=$("#logEditor"); box.classList.remove("hidden"); box.innerHTML="";
@@ -871,7 +906,7 @@ function initCloud(){
   sb.auth.onAuthStateChange((_e,session)=>onAuth(session));
 }
 function onAuth(session){cloudUser=session?.user||null;updateAuthUI();if(cloudUser)pullCloud();}
-function updateAuthUI(){const btn=$("#authBtn");if(!btn)return;if(cloudUser){btn.textContent=(cloudUser.email||"账号").split("@")[0]+" ▾";btn.classList.add("btn-primary");}else{btn.textContent="登录";btn.classList.remove("btn-primary");}}
+function updateAuthUI(){const btn=$("#authBtn");if(!btn)return;btn.textContent=cloudUser?`账号 · ${(cloudUser.email||"").split("@")[0]}`:"登录 / 云同步";}
 async function pullCloud(){
   if(!cloudUser||!sb)return;
   try{
@@ -985,14 +1020,22 @@ async function refreshDefaults(){
 }
 
 /* ---------- 模式切换 ---------- */
+/* ---------- 顶栏菜单 ---------- */
+function closeMenu(){const m=$("#menu");if(m){m.classList.add("hidden");$("#menuBtn").setAttribute("aria-expanded","false");}}
+function toggleMenu(){const m=$("#menu");const open=m.classList.contains("hidden");m.classList.toggle("hidden",!open);$("#menuBtn").setAttribute("aria-expanded",String(open));}
+
 function setMode(m){
   mode=m; editing=null; document.body.classList.remove("sheet-open");
   document.querySelectorAll(".mode-tab").forEach(b=>b.classList.toggle("active",b.dataset.mode===m));
   const build=m==="build";
   $("#buildView").classList.toggle("hidden",!build);
   $("#logView").classList.toggle("hidden",build);
-  $("#buildActions").classList.toggle("hidden",!build);
-  $("#logActions").classList.toggle("hidden",build);
+  $("#playAllBtn").classList.toggle("hidden",!build);
+  $("#newLogBtn").classList.toggle("hidden",build);
+  $("#exportBtn").classList.toggle("hidden",!build);
+  $("#resetBtn").classList.toggle("hidden",!build);
+  $("#exportBtn2").classList.toggle("hidden",build);
+  closeMenu();
   renderAddCtx();
   if(build)renderBuilder(); else renderLog();
 }
@@ -1007,7 +1050,6 @@ function init(){
   $("#exportBtn").onclick=()=>openExport(buildProgram());
   $("#exportBtn2").onclick=()=>openExport({kind:"archive"});
   $("#importBtn").onclick=()=>{$("#importText").value="";show("#importOverlay");};
-  $("#importBtn2").onclick=()=>{$("#importText").value="";show("#importOverlay");};
   $("#resetBtn").onclick=()=>{if(!confirm("清空当前编排？（曲库、上传音频、观演记录都会保留）"))return;concert={name:"",intro:null,parts:[{id:uid(),title:"Part 1",items:[]}],outro:null};persist();$("#concertName").value="";renderBuilder();};
   $("#addPartBtn").onclick=()=>{concert.parts.push({id:uid(),title:`Part ${concert.parts.length+1}`,items:[]});persist();renderBuilder();};
   $("#newLogBtn").onclick=()=>{openEditor(null);};
@@ -1041,9 +1083,14 @@ function init(){
   $("#authEmail").addEventListener("keydown",e=>{if(e.key==="Enter")sendMagic();});
   $("#authLogout").onclick=()=>{if(sb)sb.auth.signOut();hide("#authOverlay");};
   $("#authSync").onclick=()=>{pushCloud();flash("#authSync","已同步 ✓");};
+  $("#menuBtn").onclick=e=>{e.stopPropagation();toggleMenu();};
+  document.querySelectorAll(".menu-item").forEach(b=>b.addEventListener("click",closeMenu));
+  document.addEventListener("click",e=>{if(!e.target.closest(".menu-wrap"))closeMenu();});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMenu();});
   document.querySelectorAll(".mode-tab").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
   document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("show");}));
   setPlayIcon(false);
+  setMode("build");
   loadDefaultsFromCache();
   renderTabs(); renderLib(); renderBuilder(); renderAddCtx();
   initCloud();
